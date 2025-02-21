@@ -117,7 +117,7 @@ def process_transcription(transcription):
     
     return '\n'.join(processed_lines)
 
-def transcribe_video(video_path, output_path):
+def transcribe_video(video_path, output_path, temp_path="./temp"):
     """
     Extract transcription from a video file and save it as a text file.
     
@@ -130,7 +130,9 @@ def transcribe_video(video_path, output_path):
     """
     try:
         # Extract audio from the video
-        audio_path = "temp_audio.mp3"
+        audio_path = os.path.join(temp_path, "temp_audio.mp3")
+        if not os.path.exists(temp_path):
+            os.makedirs(temp_path)
         if not extract_audio(video_path, audio_path):
             return False
         
