@@ -1,0 +1,37 @@
+[0:00:00]Welcome. In this video, we are going to do a basic walkthrough of the chart in the MediTek
+[0:00:19]Expand system. You will notice that I am accessing the EMR from a web browser. The EMR can be
+[0:00:28]accessed with any device, including mobile devices such as an iPad or an iPhone. The
+[0:00:36]EMR is set up such that this navigation bar that you see here will always be available
+[0:00:42]no matter where you are in the patient's chart. Here, you can quickly jump into different
+[0:00:48]sections of the EMR such as the document section, the order section, and the discharge section
+[0:00:57]of the patient's chart. When you first go into the chart, you are defaulted into the
+[0:01:04]summary tab. The information in the chart is all organized into various tabs that you
+[0:01:11]can see here. In the top right-hand column, I can see the patient's name, account number,
+[0:01:21]location, and their height and weight. I can also see here what their resuscitation
+[0:01:30]status is. By clicking on this, I can go in and change the resuscitation status. The summary
+[0:01:39]page that you see here is composed of widgets. The widgets allow you to customize what you
+[0:01:47]would like to see when you first open the chart on this summary screen. This summary
+[0:01:53]screen allows you to pull in a wealth of information on the patient by selecting the many widgets
+[0:01:58]that are available to you. Currently, I have widgets on my summary screen that shows me
+[0:02:04]the current visits that the patient has had. It shows me triage information on this patient.
+[0:02:14]I can see common labs that have been done on this patient, as well as the most recent
+[0:02:20]documents that have been placed on the patient. Rather than searching through the chart, I'm
+[0:02:27]able to bring to this summary screen all the information that is important to me when I
+[0:02:34]go into this patient's chart. The tabs above allow you to go into different sections of
+[0:02:43]the patient's chart. For example, if I click on the Diagnostics tab, I can go here and
+[0:02:50]review diagnostics that have been done on this patient. If I click on the Nurse and
+[0:02:57]Allied Health tab here, I can go and look at nursing documentation or allied health
+[0:03:03]documentation that has been done on this patient. On the far right-hand side, there's
+[0:03:15]this column called the Reference Pane. This column stays static in this location no matter
+[0:03:21]what part of the chart you're in. It's always here so that it displays the information that
+[0:03:29]is important to you when you're in other sections such as documentation or placing
+[0:03:34]orders so that you can quickly look over to this panel to see the important information.
+[0:03:40]This tool is also composed of widgets of which you can select and customize to your liking. You
+[0:03:51]will notice that when I go into the Order section of the chart, this Reference Pane remains here.
+[0:04:00]This becomes very handy when you're documenting on the patient and wanting to look at such
+[0:04:07]information as their allergies, their home medications, and their past medical history.
+[0:04:12]The chart has a search functionality as well. The search functionality will search the patient's
+[0:04:25]chart for discrete data that you are wanting to find. For example, if I'm looking to see if this
+[0:04:32]patient has had an ultrasound before, I can type in ultrasound and it will list where in the chart
+[0:04:39]the discrete data feed of ultrasound has been found. Here I can click on this and it will
+[0:04:47]directly bring me to that ultrasound report. I hope you enjoyed this quick walkthrough.
