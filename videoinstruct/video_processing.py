@@ -55,10 +55,3 @@ def get_video_screenshot(video_path, time_str):
     
     except Exception as e:
         raise Exception(f"Error extracting screenshot: {str(e)}")
-
-
-# Example usage
-if __name__ == "__main__":
-
-    screenshot = get_video_screenshot("test/test.mp4", "00:10")
-    screenshot.save("test/screenshot.jpg")

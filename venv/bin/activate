@@ -37,7 +37,7 @@ deactivate () {
 # unset irrelevant variables
 deactivate nondestructive
 
-VIRTUAL_ENV="/Users/pouria/Documents/Coding/VideoInterpreter/venv"
+VIRTUAL_ENV="/Users/pouria/Documents/Coding/VideoInstruct/venv"
 export VIRTUAL_ENV
 
 _OLD_VIRTUAL_PATH="$PATH"

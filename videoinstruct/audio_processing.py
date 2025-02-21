@@ -150,8 +150,3 @@ def transcribe_video(video_path, output_path):
     except Exception as e:
         print(f"Error transcribing video: {str(e)}")
         return False
-    
-if __name__ == "__main__":
-    video_path = os.getenv("VIDEO_FILE_PATH", "test/test.mp4")
-    output_path = os.getenv("TRANSCRIPT_FILE_PATH", "test/test.txt")
-    transcribe_video(video_path, output_path)
