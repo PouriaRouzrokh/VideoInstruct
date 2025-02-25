@@ -4,7 +4,7 @@ import numpy as np
 import os
 from PIL import Image
 
-def get_video_screenshot(video_path, time_str):
+def VideoScreenshotTool(video_path, time_str):
     """
     Extract a screenshot from a video at a specific timestamp.
     

@@ -33,5 +33,5 @@
 [0:04:12]The chart has a search functionality as well. The search functionality will search the patient's
 [0:04:25]chart for discrete data that you are wanting to find. For example, if I'm looking to see if this
 [0:04:32]patient has had an ultrasound before, I can type in ultrasound and it will list where in the chart
-[0:04:39]the discrete data feed of ultrasound has been found. Here I can click on this and it will
+[0:04:39]the discrete data feed of ultrasound has been found. Here, I can click on this and it will
 [0:04:47]directly bring me to that ultrasound report. I hope you enjoyed this quick walkthrough.

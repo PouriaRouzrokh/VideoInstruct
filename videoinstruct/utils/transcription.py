@@ -10,7 +10,7 @@ def extract_audio(video_path, output_path):
     """
     Extract audio from a video file and save it as an MP3.
     
-    Parameters:
+    Args:
     video_path (str): Path to the input video file
     output_path (str): Path where the MP3 file will be saved
     
@@ -47,7 +47,7 @@ def format_time(time_str):
     """
     Convert time format from "00:00:00,000" to "0:00:00"
     
-    Parameters:
+    Args:
     time_str (str): Time string in format "00:00:00,000"
     
     Returns:
@@ -64,38 +64,12 @@ def format_time(time_str):
     
     return f"{hours}:{parts[1]}:{parts[2]}"
 
-# Function to transcribe audio using OpenAI's transcription service
-def transcribe_audio(file_path):
-    """
-    Transcribe audio file using OpenAI's API
-    
-    Parameters:
-    file_path (str): Path to the audio file
-    
-    Returns:
-    str: Processed transcription
-    """
-    # Get API key from environment variable
-    api_key = os.getenv("OPENAI_API_KEY")
-    
-    # Initialize OpenAI client
-    client = OpenAI(api_key=api_key)
-    
-    with open(file_path, "rb") as audio_file:
-        transcription = client.audio.transcriptions.create(
-            model="whisper-1", 
-            file=audio_file, 
-            response_format="srt"
-        )
-        # Pass the transcription directly for processing
-        return process_transcription(transcription)
-
 # Function to process the raw transcription into the desired format
 def process_transcription(transcription):
     """
     Process SRT format transcription into a simpler format
     
-    Parameters:
+    Args:
     transcription (str): Transcription in SRT format
     
     Returns:
@@ -117,11 +91,37 @@ def process_transcription(transcription):
     
     return '\n'.join(processed_lines)
 
+# Function to transcribe audio using OpenAI's transcription service
+def transcribe_audio(file_path):
+    """
+    Transcribe audio file using OpenAI's API
+    
+    Args:
+    file_path (str): Path to the audio file
+    
+    Returns:
+    str: Processed transcription
+    """
+    # Get API key from environment variable
+    api_key = os.getenv("OPENAI_API_KEY")
+    
+    # Initialize OpenAI client
+    client = OpenAI(api_key=api_key)
+    
+    with open(file_path, "rb") as audio_file:
+        transcription = client.audio.transcriptions.create(
+            model="whisper-1", 
+            file=audio_file, 
+            response_format="srt"
+        )
+        # Pass the transcription directly for processing
+        return process_transcription(transcription)
+
 def transcribe_video(video_path, output_path, temp_path="./temp"):
     """
     Extract transcription from a video file and save it as a text file.
     
-    Parameters:
+    Args:
     video_path (str): Path to the input video file
     output_path (str): Path where the transcription text file will be saved
     
