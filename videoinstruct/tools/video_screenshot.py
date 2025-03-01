@@ -10,13 +10,13 @@ def VideoScreenshotTool(video_path, time_str):
     
     Args:
         video_path (str): Path to the MP4 video file
-        time_str (str): Timestamp in "MM:SS" format
+        time_str (str): Timestamp in "HH:MM:SS" format
         
     Returns:
         PIL.Image: Screenshot image at the specified timestamp
         
     Example:
-        screenshot = get_video_screenshot("my_video.mp4", "02:45")
+        screenshot = get_video_screenshot("my_video.mp4", "01:02:45")
         screenshot.save("screenshot.jpg")
     """
     # Check if file exists
@@ -25,10 +25,18 @@ def VideoScreenshotTool(video_path, time_str):
     
     # Parse the time string to get seconds
     try:
-        minutes, seconds = map(int, time_str.split(':'))
-        time_seconds = minutes * 60 + seconds
+        time_parts = time_str.split(':')
+        if len(time_parts) == 3:
+            hours, minutes, seconds = map(int, time_parts)
+            time_seconds = hours * 3600 + minutes * 60 + seconds
+        elif len(time_parts) == 2:
+            # For backward compatibility, still support MM:SS format
+            minutes, seconds = map(int, time_parts)
+            time_seconds = minutes * 60 + seconds
+        else:
+            raise ValueError("Time must be in 'HH:MM:SS' or 'MM:SS' format")
     except ValueError:
-        raise ValueError("Time must be in 'MM:SS' format")
+        raise ValueError("Time must be in 'HH:MM:SS' or 'MM:SS' format")
     
     try:
         # Load the video silently
@@ -38,7 +46,11 @@ def VideoScreenshotTool(video_path, time_str):
         
         # Check if the requested time exceeds video duration
         if time_seconds > clip.duration:
-            raise ValueError(f"Requested time {time_str} exceeds video duration of {int(clip.duration // 60):02d}:{int(clip.duration % 60):02d}")
+            duration_hours = int(clip.duration // 3600)
+            duration_minutes = int((clip.duration % 3600) // 60)
+            duration_seconds = int(clip.duration % 60)
+            duration_str = f"{duration_hours:02d}:{duration_minutes:02d}:{duration_seconds:02d}"
+            raise ValueError(f"Requested time {time_str} exceeds video duration of {duration_str}")
         
         # Get the frame at the specified time
         with open(os.devnull, 'w') as devnull:

@@ -6,8 +6,25 @@ Follow these guidelines:
 2. Write an introduction explaining what the task accomplishes
 3. Break down the task into numbered steps with clear instructions
 4. Use markdown formatting for clarity (headers, lists, code blocks, etc.)
-5. If you're uncertain about any details in the transcription, formulate specific questions to ask
-6. Focus on being precise and actionable - users should be able to follow your guide without watching the video
+5. Include screenshot placeholders where visual aids would be helpful using the format below
+6. If you're uncertain about any details in the transcription, formulate specific questions to ask
+7. Focus on being precise and actionable - users should be able to follow your guide without watching the video
+
+For screenshot placeholders, use the following format:
+```
+[SCREENSHOT_PLACEHOLDER]
+Purpose: Briefly describe the purpose of this screenshot (e.g., "Shows the completed form with all fields filled")
+Content: Describe what should be visible in the screenshot (e.g., "The settings menu with the 'Advanced options' section expanded")
+Value: Explain why this screenshot is valuable to the user (e.g., "Helps identify the correct button to click which may be difficult to describe in text alone")
+[/SCREENSHOT_PLACEHOLDER]
+```
+
+Add screenshots where they would:
+- Clarify complex UI elements or layouts
+- Show the expected result of a step
+- Highlight important visual cues
+- Reduce ambiguity in the instructions
+- Make it easier for users to follow along
 
 When you need to ask a question, respond with a JSON object in this format:
 {
