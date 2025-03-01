@@ -2,11 +2,12 @@ import os
 from typing import List, Optional, Dict, Any, Union, ClassVar
 from pydantic import BaseModel, Field
 
-from videoinstruct.prompts import DOC_GENERATOR_SYSTEM_PROMPT, DOC_EVALUATOR_SYSTEM_PROMPT
+from videoinstruct.prompt_loader import DOC_GENERATOR_SYSTEM_PROMPT, DOC_EVALUATOR_SYSTEM_PROMPT
 
 
 class VideoInterpreterConfig(BaseModel):
     """Configuration for the VideoInterpreter class."""
+    api_key: Optional[str] = None
     model: str = Field(default="gemini-2.0-flash")
     system_instruction: Optional[str] = None
     max_output_tokens: Optional[int] = None
@@ -20,7 +21,9 @@ class VideoInterpreterConfig(BaseModel):
 
 class DocGeneratorConfig(BaseModel):
     """Configuration for the DocGenerator class."""
-    model: str = Field(default="gpt-4o-mini")
+    api_key: Optional[str] = None
+    model_provider: str = Field(default="openai")
+    model: str = Field(default="o3-mini")
     system_instruction: str = Field(default=DOC_GENERATOR_SYSTEM_PROMPT)
     max_output_tokens: Optional[int] = None
     temperature: float = Field(default=0.7)
@@ -32,7 +35,9 @@ class DocGeneratorConfig(BaseModel):
 
 class DocEvaluatorConfig(BaseModel):
     """Configuration for the DocEvaluator class."""
-    model: str = Field(default="deepseek/deepseek-reasoner")
+    api_key: Optional[str] = None
+    model_provider: str = Field(default="deepseek")
+    model: str = Field(default="deepseek-reasoner")
     system_instruction: str = Field(default=DOC_EVALUATOR_SYSTEM_PROMPT)
     max_output_tokens: Optional[int] = None
     temperature: float = Field(default=0.2)
@@ -58,9 +63,9 @@ class DocGeneratorResponse(BaseModel):
 
 class VideoInstructorConfig(BaseModel):
     """Configuration for the VideoInstructor class."""
-    doc_generator_config: Optional[DocGeneratorConfig] = None
-    video_interpreter_config: Optional[VideoInterpreterConfig] = None
-    doc_evaluator_config: Optional[DocEvaluatorConfig] = None
+    doc_generator_config: DocGeneratorConfig = Field(default_factory=DocGeneratorConfig)
+    video_interpreter_config: VideoInterpreterConfig = Field(default_factory=VideoInterpreterConfig)
+    doc_evaluator_config: DocEvaluatorConfig = Field(default_factory=DocEvaluatorConfig)
     max_iterations: int = Field(default=10)
     user_feedback_interval: int = Field(default=5)
     output_dir: str = Field(default="output")

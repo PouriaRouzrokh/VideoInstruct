@@ -41,6 +41,8 @@ def main():
     config = VideoInstructorConfig(
         # DocGenerator configuration
         doc_generator_config=DocGeneratorConfig(
+            api_key=openai_api_key,
+            model_provider="openai",
             model="o3-mini", 
             temperature=0.7,
             max_output_tokens=4000
@@ -48,13 +50,16 @@ def main():
         
         # VideoInterpreter configuration
         video_interpreter_config=VideoInterpreterConfig(
+            api_key=gemini_api_key,
             model="gemini-2.0-flash",  # You can change this to any supported Gemini model
             temperature=0.7
         ),
         
         # DocEvaluator configuration
         doc_evaluator_config=DocEvaluatorConfig(
-            model="deepseek-reasoner",  # DeepSeek Reasoner model
+            api_key=deepseek_api_key,
+            model_provider="deepseek",
+            model="deepseek-reasoner", 
             temperature=0.2,
             max_rejection_count=3  # Number of rejections before escalating to user
         ),
@@ -78,14 +83,17 @@ def main():
     # Initialize VideoInstructor
     instructor = VideoInstructor(
         video_path=video_path,
-        doc_generator_api_key=openai_api_key,
-        video_interpreter_api_key=gemini_api_key,
-        doc_evaluator_api_key=deepseek_api_key,
         config=config
     )
     
     # Generate documentation
     print(f"Generating documentation for video: {video_file}")
+    print("-"*100)
+    print("Here are the current models empowering the agents:")
+    print("DocGenerator: ", instructor.doc_generator.model_provider, instructor.doc_generator.config.model)
+    print("VideoInterpreter: ", "google", instructor.video_interpreter.config.model)
+    print("DocEvaluator: ", instructor.doc_evaluator.model_provider, instructor.doc_evaluator.config.model)
+    print("-"*100)
     print("\nWorkflow:")
     print("1. Video transcription will be extracted")
     print("2. VideoInterpreter will provide a detailed description")
@@ -95,6 +103,7 @@ def main():
     print("   - Will provide feedback on each evaluation round")
     print("   - Will escalate to user after 3 rejections")
     print("6. You'll be asked for feedback at certain intervals")
+    print("-"*100)
     print("\nStarting the process...\n")
     
     documentation = instructor.generate_documentation()

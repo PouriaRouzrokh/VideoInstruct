@@ -8,7 +8,7 @@ import markdown
 import re
 
 from videoinstruct.configs import DocGeneratorConfig
-from videoinstruct.prompts import DOC_GENERATOR_SYSTEM_PROMPT
+from videoinstruct.prompt_loader import DOC_GENERATOR_SYSTEM_PROMPT
 
 
 class DocGenerator:
@@ -24,34 +24,32 @@ class DocGenerator:
     
     def __init__(
         self,
-        api_key: Optional[str] = None,
-        model_provider: str = "openai",
-        transcription: Optional[str] = None,
         config: Optional[DocGeneratorConfig] = None,
+        transcription: Optional[str] = None,
         output_dir: str = "output"
     ):
         """
         Initialize the DocGenerator.
         
         Args:
-            api_key: The API key for the LLM provider. If None, it will try to read from environment variables.
-            model_provider: The LLM provider (e.g., "openai", "anthropic", "ollama").
+            config: Configuration for the LLM model, including model provider and API key.
             transcription: The transcription of the video to generate documentation for.
-            config: Configuration for the LLM model.
             output_dir: Directory to save the generated documentation.
         """
-        self.model_provider = model_provider
-        self.transcription = transcription
         self.config = config or DocGeneratorConfig()
+        self.model_provider = self.config.model_provider
+        self.transcription = transcription
         self.conversation_history = []
         self.output_dir = output_dir
         
-        # Set API key based on provider
-        if api_key:
-            if model_provider == "openai":
-                os.environ["OPENAI_API_KEY"] = api_key
-            elif model_provider == "anthropic":
-                os.environ["ANTHROPIC_API_KEY"] = api_key
+        # Set API key from config if provided
+        if self.config.api_key:
+            if self.model_provider == "openai":
+                os.environ["OPENAI_API_KEY"] = self.config.api_key
+            elif self.model_provider == "anthropic":
+                os.environ["ANTHROPIC_API_KEY"] = self.config.api_key
+            elif self.model_provider == "deepseek":
+                os.environ["DEEPSEEK_API_KEY"] = self.config.api_key
             # Add other providers as needed
         
         # Create output directory if it doesn't exist
@@ -312,7 +310,13 @@ class DocGenerator:
 
 
 # Example usage:
-# doc_generator = DocGenerator(model_provider="openai")
+# doc_generator = DocGenerator(
+#     config=DocGeneratorConfig(
+#         api_key=os.getenv("OPENAI_API_KEY"),
+#         model_provider="openai",
+#         model="gpt-4o"
+#     )
+# )
 # doc_generator.set_transcription("This is a transcription of a video showing how to create a new GitHub repository...")
 # documentation = doc_generator.generate_documentation()
 # print(documentation)

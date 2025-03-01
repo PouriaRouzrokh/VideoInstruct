@@ -10,28 +10,30 @@ from videoinstruct.configs import VideoInterpreterConfig
 
 
 class VideoInterpreter:
-    """A class for interpreting videos using Gemini API."""
+    """A class for interpreting videos using Google's Gemini API."""
     
     def __init__(
         self,
-        api_key: Optional[str] = None,
-        video_path: Optional[str] = None,
-        config: Optional[VideoInterpreterConfig] = None
+        config: Optional[VideoInterpreterConfig] = None,
+        video_path: Optional[str] = None
     ):
         """
         Initialize the VideoInterpreter.
         
         Args:
-            api_key: The Gemini API key. If None, it will be read from the GEMINI_API_KEY environment variable.
+            config: Configuration for the Gemini model, including API key.
             video_path: Path to the video file to interpret.
-            config: Configuration for the Gemini model.
         """
-        self.api_key = api_key or os.getenv("GEMINI_API_KEY")
-        if not self.api_key:
-            raise ValueError("API key must be provided or set as GEMINI_API_KEY environment variable")
-        
-        self.client = genai.Client(api_key=self.api_key)
         self.config = config or VideoInterpreterConfig()
+        
+        # Get API key from config or environment variable
+        self.api_key = self.config.api_key or os.getenv("GEMINI_API_KEY")
+        if not self.api_key:
+            raise ValueError("API key must be provided in config or set as GEMINI_API_KEY environment variable")
+        
+        # Initialize Gemini client
+        self.client = genai.Client(api_key=self.api_key)
+        
         self.video_file = None
         self.conversation_history = []
         

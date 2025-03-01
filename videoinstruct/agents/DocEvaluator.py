@@ -6,7 +6,7 @@ import json
 import litellm
 
 from videoinstruct.configs import DocEvaluatorConfig
-from videoinstruct.prompts import DOC_EVALUATOR_SYSTEM_PROMPT
+from videoinstruct.prompt_loader import DOC_EVALUATOR_SYSTEM_PROMPT
 
 class DocEvaluator:
     """
@@ -21,20 +21,16 @@ class DocEvaluator:
     
     def __init__(
         self,
-        api_key: Optional[str] = None,
-        model_provider: str = "deepseek",
         config: Optional[DocEvaluatorConfig] = None
     ):
         """
         Initialize the DocEvaluator.
         
         Args:
-            api_key: The API key for the LLM provider. If None, it will try to read from environment variables.
-            model_provider: The LLM provider (default is "deepseek" for DeepSeek Reasoner).
-            config: Configuration for the LLM model.
+            config: Configuration for the LLM model, including model provider and API key.
         """
-        self.model_provider = model_provider
         self.config = config or DocEvaluatorConfig()
+        self.model_provider = self.config.model_provider
         self.rejection_count = 0
         self.conversation_history = []  # Store the full conversation history
         self.feedback_history = []  # Store just the feedback for easy access
@@ -44,14 +40,14 @@ class DocEvaluator:
             {"role": "system", "content": self.config.system_instruction}
         ]
         
-        # Set API key based on provider
-        if api_key:
-            if model_provider == "deepseek":
-                os.environ["DEEPSEEK_API_KEY"] = api_key
-            elif model_provider == "openai":
-                os.environ["OPENAI_API_KEY"] = api_key
-            elif model_provider == "anthropic":
-                os.environ["ANTHROPIC_API_KEY"] = api_key
+        # Set API key from config if provided
+        if self.config.api_key:
+            if self.model_provider == "deepseek":
+                os.environ["DEEPSEEK_API_KEY"] = self.config.api_key
+            elif self.model_provider == "openai":
+                os.environ["OPENAI_API_KEY"] = self.config.api_key
+            elif self.model_provider == "anthropic":
+                os.environ["ANTHROPIC_API_KEY"] = self.config.api_key
             # Add other providers as needed
     
     def evaluate_documentation(self, documentation: str) -> Tuple[bool, str]:
@@ -233,10 +229,16 @@ class DocEvaluator:
 
 
 # Example usage:
-# doc_evaluator = DocEvaluator()
+# doc_evaluator = DocEvaluator(
+#     config=DocEvaluatorConfig(
+#         api_key=os.getenv("DEEPSEEK_API_KEY"),
+#         model_provider="deepseek",
+#         model="deepseek-reasoner"
+#     )
+# )
 # is_approved, feedback = doc_evaluator.evaluate_documentation("# Sample Documentation\n\nThis is a test.")
 # print(f"Approved: {is_approved}\nFeedback: {feedback}")
-
+#
 # # Later, evaluate a revised version
 # is_approved, feedback = doc_evaluator.evaluate_documentation("# Sample Documentation\n\nThis is a revised test with more details.")
 # print(f"Approved: {is_approved}\nFeedback: {feedback}") 

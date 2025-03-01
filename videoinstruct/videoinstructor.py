@@ -34,9 +34,6 @@ class VideoInstructor:
         self,
         video_path: Optional[str] = None,
         transcription_path: Optional[str] = None,
-        doc_generator_api_key: Optional[str] = None,
-        video_interpreter_api_key: Optional[str] = None,
-        doc_evaluator_api_key: Optional[str] = None,
         config: Optional[VideoInstructorConfig] = None
     ):
         """
@@ -45,10 +42,7 @@ class VideoInstructor:
         Args:
             video_path: Path to the video file.
             transcription_path: Path to an existing transcription file (optional).
-            doc_generator_api_key: API key for the DocGenerator's LLM provider.
-            video_interpreter_api_key: API key for the VideoInterpreter (Gemini).
-            doc_evaluator_api_key: API key for the DocEvaluator (DeepSeek).
-            config: Configuration for the VideoInstructor.
+            config: Configuration for the VideoInstructor, including API keys and model settings.
         """
         self.video_path = video_path
         self.transcription_path = transcription_path
@@ -61,24 +55,20 @@ class VideoInstructor:
         if not os.path.exists(self.config.temp_dir):
             os.makedirs(self.config.temp_dir)
         
-        # Initialize DocGenerator
+        # Initialize DocGenerator with configuration
         self.doc_generator = DocGenerator(
-            api_key=doc_generator_api_key,
             config=self.config.doc_generator_config,
             output_dir=self.config.output_dir
         )
         
-        # Initialize VideoInterpreter
+        # Initialize VideoInterpreter with configuration
         self.video_interpreter = VideoInterpreter(
-            api_key=video_interpreter_api_key,
             config=self.config.video_interpreter_config
         )
         
-        # Initialize DocEvaluator with proper configuration
-        doc_evaluator_config = self.config.doc_evaluator_config or DocEvaluatorConfig()
+        # Initialize DocEvaluator with configuration
         self.doc_evaluator = DocEvaluator(
-            api_key=doc_evaluator_api_key,
-            config=doc_evaluator_config
+            config=self.config.doc_evaluator_config
         )
         
         # Load video and transcription if provided
@@ -442,6 +432,21 @@ if __name__ == "__main__":
     instructor = VideoInstructor(
         video_path="data/example_video.mp4",  # Place your video file in the data directory
         config=VideoInstructorConfig(
+            # Set API keys in the configs
+            doc_generator_config=DocGeneratorConfig(
+                api_key=os.getenv("OPENAI_API_KEY"),
+                model_provider="openai",
+                model="gpt-4o"
+            ),
+            video_interpreter_config=VideoInterpreterConfig(
+                api_key=os.getenv("GEMINI_API_KEY"),
+                model="gemini-2.0-flash"
+            ),
+            doc_evaluator_config=DocEvaluatorConfig(
+                api_key=os.getenv("DEEPSEEK_API_KEY"),
+                model_provider="deepseek",
+                model="deepseek-reasoner"
+            ),
             user_feedback_interval=3,  # Get user feedback every 3 iterations
             max_iterations=15
         )
