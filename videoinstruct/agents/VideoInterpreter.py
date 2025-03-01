@@ -6,18 +6,7 @@ from typing import List, Optional, Dict, Any, Union
 from pydantic import BaseModel, Field
 from IPython.display import Markdown
 
-
-class VideoInterpreterConfig(BaseModel):
-    """Configuration for the VideoInterpreter class."""
-    model: str = Field(default="gemini-2.0-flash")
-    system_instruction: Optional[str] = None
-    max_output_tokens: Optional[int] = None
-    top_k: Optional[int] = None
-    top_p: Optional[float] = None
-    temperature: Optional[float] = None
-    response_mime_type: Optional[str] = None
-    stop_sequences: Optional[List[str]] = None
-    seed: Optional[int] = None
+from videoinstruct.configs import VideoInterpreterConfig
 
 
 class VideoInterpreter:

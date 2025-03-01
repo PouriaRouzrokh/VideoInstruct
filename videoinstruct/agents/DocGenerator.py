@@ -1,65 +1,25 @@
 import os
 import time
 from typing import List, Optional, Dict, Any, Union
-from pydantic import BaseModel, Field
 import json
 import litellm
 from IPython.display import Markdown
 import markdown
 import re
 
-# System prompt for DocGenerator
-# This is defined outside the class for easy editing
-DOC_GENERATOR_SYSTEM_PROMPT = """
-You are an expert technical writer who creates clear, concise step-by-step guides based on video transcriptions.
-Your task is to generate a detailed markdown guide that explains how to perform the task demonstrated in the video.
-
-Follow these guidelines:
-1. Create a clear title that describes the task
-2. Write an introduction explaining what the task accomplishes
-3. Break down the task into numbered steps with clear instructions
-4. Use markdown formatting for clarity (headers, lists, code blocks, etc.)
-5. If you're uncertain about any details in the transcription, formulate specific questions to ask
-6. Focus on being precise and actionable - users should be able to follow your guide without watching the video
-
-When you need to ask a question, respond with a JSON object in this format:
-{
-  "type": "question",
-  "content": "Your specific question here"
-}
-
-When you're providing documentation, respond with a JSON object in this format:
-{
-  "type": "documentation",
-  "content": "Your markdown documentation here"
-}
-
-When you believe the documentation is complete and no further questions are needed, respond with:
-{
-  "type": "complete",
-  "content": "Your final markdown documentation here"
-}
-
-Remember that you only have access to the video transcription, not the video itself. If you need visual details,
-you must ask specific questions to get that information.
-"""
-
-class DocGeneratorConfig(BaseModel):
-    """Configuration for the DocGenerator class."""
-    model: str = Field(default="gpt-4o-mini")
-    system_instruction: str = Field(default=DOC_GENERATOR_SYSTEM_PROMPT)
-    max_output_tokens: Optional[int] = None
-    temperature: float = Field(default=0.7)
-    top_p: Optional[float] = None
-    stream: bool = Field(default=False)
-    seed: Optional[int] = None
-    response_format: Optional[Dict[str, Any]] = Field(default={"type": "json_object"})
+from videoinstruct.configs import DocGeneratorConfig
+from videoinstruct.prompts import DOC_GENERATOR_SYSTEM_PROMPT
 
 
 class DocGenerator:
     """
-    A class for generating step-by-step documentation based on video transcriptions.
-    Works with LiteLLM to support various LLM providers.
+    A class for generating documentation from video transcriptions using LLMs.
+    
+    This class handles:
+    1. Processing video transcriptions
+    2. Generating step-by-step documentation
+    3. Refining documentation based on feedback
+    4. Saving and displaying the generated documentation
     """
     
     def __init__(

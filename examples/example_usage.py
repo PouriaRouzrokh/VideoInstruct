@@ -8,6 +8,7 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from videoinstruct.videoinstructor import VideoInstructor, VideoInstructorConfig
 from videoinstruct.agents.DocGenerator import DocGeneratorConfig
 from videoinstruct.agents.VideoInterpreter import VideoInterpreterConfig
+from videoinstruct.agents.DocEvaluator import DocEvaluatorConfig
 
 # Load environment variables from .env file
 load_dotenv()
@@ -20,18 +21,20 @@ def main():
     1. Load a video file
     2. Extract its transcription
     3. Generate step-by-step documentation
-    4. Handle questions and user feedback
+    4. Evaluate documentation quality
+    5. Handle questions and user feedback
     
     Before running this script:
     1. Place your video file in the 'data' directory
-    2. Set the OPENAI_API_KEY and GEMINI_API_KEY environment variables in your .env file
+    2. Set the OPENAI_API_KEY, GEMINI_API_KEY, and DEEPSEEK_API_KEY environment variables in your .env file
     """
     # Get API keys from environment variables
     openai_api_key = os.getenv("OPENAI_API_KEY")
     gemini_api_key = os.getenv("GEMINI_API_KEY")
+    deepseek_api_key = os.getenv("DEEPSEEK_API_KEY")
     
-    if not openai_api_key or not gemini_api_key:
-        print("Error: API keys not found. Please set OPENAI_API_KEY and GEMINI_API_KEY in your .env file.")
+    if not openai_api_key or not gemini_api_key or not deepseek_api_key:
+        print("Error: API keys not found. Please set OPENAI_API_KEY, GEMINI_API_KEY, and DEEPSEEK_API_KEY in your .env file.")
         return
     
     # Configure the VideoInstructor
@@ -47,6 +50,13 @@ def main():
         video_interpreter_config=VideoInterpreterConfig(
             model="gemini-2.0-flash",  # You can change this to any supported Gemini model
             temperature=0.7
+        ),
+        
+        # DocEvaluator configuration
+        doc_evaluator_config=DocEvaluatorConfig(
+            model="deepseek-reasoner",  # DeepSeek Reasoner model
+            temperature=0.2,
+            max_rejection_count=3  # Number of rejections before escalating to user
         ),
         
         # VideoInstructor configuration
@@ -70,11 +80,23 @@ def main():
         video_path=video_path,
         doc_generator_api_key=openai_api_key,
         video_interpreter_api_key=gemini_api_key,
+        doc_evaluator_api_key=deepseek_api_key,
         config=config
     )
     
     # Generate documentation
     print(f"Generating documentation for video: {video_file}")
+    print("\nWorkflow:")
+    print("1. Video transcription will be extracted")
+    print("2. VideoInterpreter will provide a detailed description")
+    print("3. DocGenerator will create step-by-step documentation")
+    print("4. Generated documentation will be shown to you before evaluation")
+    print("5. DocEvaluator will assess documentation quality")
+    print("   - Will provide feedback on each evaluation round")
+    print("   - Will escalate to user after 3 rejections")
+    print("6. You'll be asked for feedback at certain intervals")
+    print("\nStarting the process...\n")
+    
     documentation = instructor.generate_documentation()
     
     print("\nDocumentation generation complete!")

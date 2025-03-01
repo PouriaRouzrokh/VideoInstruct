@@ -7,8 +7,10 @@ VideoInstruct is a tool that automatically generates step-by-step documentation 
 - Automatic video transcription extraction
 - AI-powered video interpretation
 - Step-by-step documentation generation
+- Automated documentation quality evaluation with conversation memory
 - Interactive Q&A workflow between AI agents
 - User feedback integration for documentation refinement
+- Configurable escalation to human users
 
 ## Project Structure
 
@@ -21,6 +23,7 @@ VideoInstruct/
 ├── videoinstruct/         # Main package
 │   ├── agents/            # AI agent modules
 │   │   ├── DocGenerator.py    # Documentation generation agent
+│   │   ├── DocEvaluator.py    # Documentation evaluation agent
 │   │   └── VideoInterpreter.py # Video interpretation agent
 │   ├── utils/             # Utility functions
 │   │   └── transcription.py   # Video transcription utilities
@@ -33,6 +36,7 @@ VideoInstruct/
 - Python 3.8+
 - OpenAI API key (for DocGenerator)
 - Google Gemini API key (for VideoInterpreter)
+- DeepSeek API key (for DocEvaluator)
 - FFmpeg (for video processing)
 
 ## Installation
@@ -56,6 +60,7 @@ VideoInstruct/
    ```
    OPENAI_API_KEY=your_openai_api_key
    GEMINI_API_KEY=your_gemini_api_key
+   DEEPSEEK_API_KEY=your_deepseek_api_key
    ```
 
 ## Usage
@@ -73,8 +78,26 @@ VideoInstruct/
    - Get a detailed description from the VideoInterpreter
    - Generate step-by-step documentation using the DocGenerator
    - Ask questions to the VideoInterpreter when needed
+   - Evaluate documentation quality using the DocEvaluator
+   - Escalate to human user after a configurable number of rejections
    - Collect your feedback to refine the documentation
    - Save the final documentation to the `output` directory
+
+## Workflow
+
+VideoInstruct follows this workflow:
+
+1. **Transcription**: Extract text from the video
+2. **Initial Description**: Get a detailed visual description from VideoInterpreter
+3. **Documentation Generation**: DocGenerator creates initial documentation
+4. **User Preview**: Generated documentation is shown to the user before evaluation
+5. **Documentation Evaluation**: DocEvaluator assesses documentation quality
+   - Provides feedback on each evaluation round
+   - Maintains conversation memory for context-aware evaluation
+   - Escalates to human user after a configurable number of rejections
+6. **Refinement**: Documentation is refined based on evaluator feedback
+7. **User Feedback**: User provides final approval or additional feedback
+8. **Output**: Final documentation is saved as markdown
 
 ## Customization
 
@@ -93,6 +116,13 @@ config = VideoInstructorConfig(
     video_interpreter_config=VideoInterpreterConfig(
         model="gemini-2.0-flash",  # Change to any supported Gemini model
         temperature=0.7
+    ),
+
+    # DocEvaluator configuration
+    doc_evaluator_config=DocEvaluatorConfig(
+        model="deepseek/deepseek-reasoner",  # Change to any supported model
+        temperature=0.2,
+        max_rejection_count=3  # Number of rejections before escalating to user
     ),
 
     # VideoInstructor configuration
