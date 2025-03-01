@@ -1,95 +1,108 @@
-# Multiagent VideoInstruct Framework
+# VideoInstruct
 
-## Project Overview
+VideoInstruct is a tool that automatically generates step-by-step documentation from instructional videos. It uses AI to extract transcriptions, interpret video content, and create comprehensive markdown guides.
 
-This project develops a multiagent framework that transforms video demonstrations into comprehensive PDF documentation with text and annotated images. The system uses specialized agents working collaboratively to interpret video content, generate clear documentation, and ensure quality through evaluation and feedback.
+## Features
 
-## Workflow
+- Automatic video transcription extraction
+- AI-powered video interpretation
+- Step-by-step documentation generation
+- Interactive Q&A workflow between AI agents
+- User feedback integration for documentation refinement
 
-1. User provides a video demonstration of a task
-2. The system processes the video and generates detailed step-by-step documentation
-3. The documentation undergoes evaluation and revision until quality standards are met
-4. A final PDF with text and annotated images is delivered to the user
+## Project Structure
 
-## Agents
+```
+VideoInstruct/
+├── data/                  # Place your video files here
+├── examples/              # Example usage scripts
+├── output/                # Generated documentation output
+├── temp/                  # Temporary files (transcriptions, etc.)
+├── videoinstruct/         # Main package
+│   ├── agents/            # AI agent modules
+│   │   ├── DocGenerator.py    # Documentation generation agent
+│   │   └── VideoInterpreter.py # Video interpretation agent
+│   ├── utils/             # Utility functions
+│   │   └── transcription.py   # Video transcription utilities
+│   └── videoinstructor.py # Main orchestration class
+└── README.md              # This file
+```
 
-### 1. DocGenerator
+## Requirements
 
-**Primary Role**: Create detailed PDF documentation with text and annotated images based on video demonstrations.
+- Python 3.8+
+- OpenAI API key (for DocGenerator)
+- Google Gemini API key (for VideoInterpreter)
+- FFmpeg (for video processing)
 
-**Inputs**:
+## Installation
 
-- Timed transcript of the video (with timestamps)
-- Feedback from DocEvaluator (when available)
+1. Clone the repository:
 
-**Output**:
+   ```
+   git clone https://github.com/yourusername/VideoInstruct.git
+   cd VideoInstruct
+   ```
 
-- PDF documentation with step-by-step instructions and annotated images
+2. Create a virtual environment and install dependencies:
 
-**Access to**:
+   ```
+   python -m venv venv
+   source venv/bin/activate  # On Windows: venv\Scripts\activate
+   pip install -r requirements.txt
+   ```
 
-- VideoInterpretor agent for answering questions about video content
-- Screenshot tool to capture specific video frames
-- ImageAnnotator agent for creating annotated images
-- Previous feedback from DocEvaluator (when available)
+3. Create a `.env` file in the root directory with your API keys:
+   ```
+   OPENAI_API_KEY=your_openai_api_key
+   GEMINI_API_KEY=your_gemini_api_key
+   ```
 
-### 2. VideoInterpretor
+## Usage
 
-**Primary Role**: Analyze and interpret video content to answer the DocGenerator's questions.
+1. Place your video file in the `data` directory.
 
-**Inputs**:
+2. Run the example script:
 
-- Video file
-- Specific questions from DocGenerator
+   ```
+   python examples/example_usage.py
+   ```
 
-**Output**:
+3. The script will:
+   - Extract the transcription from your video
+   - Get a detailed description from the VideoInterpreter
+   - Generate step-by-step documentation using the DocGenerator
+   - Ask questions to the VideoInterpreter when needed
+   - Collect your feedback to refine the documentation
+   - Save the final documentation to the `output` directory
 
-- Detailed answers about video content
+## Customization
 
-### 3. ImageAnnotator
+You can customize the behavior of VideoInstruct by modifying the configuration parameters:
 
-**Primary Role**: Create annotated images from video screenshots based on DocGenerator's requirements.
+```python
+config = VideoInstructorConfig(
+    # DocGenerator configuration
+    doc_generator_config=DocGeneratorConfig(
+        model="gpt-4o-mini",  # Change to any supported model
+        temperature=0.7,
+        max_output_tokens=4000
+    ),
 
-**Inputs**:
+    # VideoInterpreter configuration
+    video_interpreter_config=VideoInterpreterConfig(
+        model="gemini-2.0-flash",  # Change to any supported Gemini model
+        temperature=0.7
+    ),
 
-- Screenshot from video
-- Annotation instructions from DocGenerator
+    # VideoInstructor configuration
+    user_feedback_interval=3,  # Get user feedback every 3 iterations
+    max_iterations=15,
+    output_dir="output",
+    temp_dir="temp"
+)
+```
 
-**Output**:
+## License
 
-- Annotated image with bounding boxes, arrows, and labels
-
-**Tools**:
-
-- ImageAnnotatorTool: Creates annotations based on element locations and connections
-- ImageElementDetector: Automatically identifies and locates elements in the image
-
-### 4. DocEvaluator
-
-**Primary Role**: Review documentation for clarity and completeness, providing feedback for improvement.
-
-**Inputs**:
-
-- PDF documentation from DocGenerator
-
-**Output**:
-
-- Detailed feedback and improvement suggestions
-
-## Termination Conditions
-
-The documentation generation process continues until either:
-
-1. A predetermined maximum number of revision rounds is reached, or
-2. DocEvaluator confirms the documentation meets all quality standards with no further changes needed
-
-## Process Flow
-
-1. DocGenerator analyzes the timed transcript
-2. DocGenerator consults VideoInterpretor as needed for clarification
-3. DocGenerator captures screenshots at key moments
-4. DocGenerator requests ImageAnnotator to enhance screenshots with visual guides
-5. DocGenerator creates the initial PDF documentation
-6. DocEvaluator reviews the documentation and provides feedback
-7. Steps 1-6 repeat until termination conditions are met
-8. Final PDF documentation is delivered
+[MIT License](LICENSE)

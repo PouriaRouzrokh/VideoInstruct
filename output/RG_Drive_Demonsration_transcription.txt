@@ -1,0 +1,128 @@
+[0:00:00]All right, so I'm going to share my screen with you very soon, and here we go.
+[0:00:11]I want you to show how I do a task of mine that is basically charting all the papers
+[0:00:19]that have been published in Radiographics top 10 articles, and I want you to basically
+[0:00:26]understand how I do this so that you can do it automatically yourself.
+[0:00:30]So the process starts like this.
+[0:00:32]Obviously, the first thing is that we need to open the Radiographics website for the
+[0:00:36]top 10 articles, so you might already know the path to this website, but the way that
+[0:00:41]I usually do that is that I just search for Radiographics top 10 articles, and the first
+[0:00:49]thing that Google showed to me is the RG team top 10 reading list.
+[0:00:53]This is the link that I'm looking for, so you might want to directly open this one or
+[0:00:57]you basically can just follow what I did and open this page from the Google.
+[0:01:04]So when you have this page open, what you are seeing on this screen, and let me zoom
+[0:01:09]in a little bit, we are basically looking at different categories of articles that Radiographics
+[0:01:14]have put together.
+[0:01:16]In each of these categories, you can find some highlighted papers that the Radiographics
+[0:01:22]editorial group had put together for different residency years.
+[0:01:26]Now my goal is to have a very good chart of all these articles in a Google spreadsheet
+[0:01:33]that I can later on load in my own Python programs and process them however that is
+[0:01:39]required.
+[0:01:40]So what I'm going to do at the moment is that I'm going to basically click on what I
+[0:01:48]want you to do is that I want you to click on any of these basically categories, breast
+[0:01:54]imaging, cardiac, all of them together, and follow the process that I'm going to show
+[0:01:59]you for either of those categories.
+[0:02:02]So here you see that I am seeing different residency years and even within one residency
+[0:02:07]year I have different categories of articles, basic, intermediate, and as we go forward
+[0:02:13]more and more categories of papers.
+[0:02:16]So let's click on one of them and see what happens.
+[0:02:19]So this is, for example, one of the papers in the basic category for R1 residents.
+[0:02:24]The first thing that you might notice here is that I do not have access to the full link
+[0:02:29]of this article.
+[0:02:30]That is okay for now.
+[0:02:31]I don't need to log into Radiographics to chart the kind of information that I am looking
+[0:02:36]for but where I do need to log in is basically my Google Drive.
+[0:02:41]So I'm going to open my Google Drive.
+[0:02:46]So let's type for drive.google.com and you see that I'm already logged in but what will
+[0:02:52]happen is that you will probably work with a window that does not have myself as logged
+[0:02:59]in user.
+[0:03:00]So what you need to basically do is to use another account or to just type my email which
+[0:03:07]is this one, pioruzroj at gmail.com and then based on that it might ask for the actual
+[0:03:16]user which is me in this case to log in using a passkey that I'm going to do but depending
+[0:03:22]on the computer that you are dealing with you might see different login prompts.
+[0:03:26]So feel free to ask the user to follow whatever instructions are needed so that they can log
+[0:03:34]in to their Google Drive and for me personally I use a passkey but again depending on the
+[0:03:40]user who might ask you the same thing this could be a different process.
+[0:03:44]Some of them might need to enter their own password.
+[0:03:46]Some of them might need to basically follow what I did and use their own passkeys.
+[0:03:53]And then it's not important how many files or folders I have here on this screen but
+[0:03:57]what I want you to do is that I want you to create a new folder as I did and put together
+[0:04:03]and come up with a name like you know this is rg-top10-articles.
+[0:04:15]Then I want you to go inside that folder on Google Drive and then create an s-spreadsheet
+[0:04:22]obviously a blank spreadsheet for the moment and it should be you know let's put the name
+[0:04:27]as top10-articles.
+[0:04:33]Now what I want you to do is that so in the final use case every row is going to relate
+[0:04:43]to one article from the rg-theme.
+[0:04:47]So for the sake of simplicity I'm going to start a tab-in-tab kind of setup here so you're
+[0:04:53]seeing now two different tabs open at the same time.
+[0:04:59]So as I mentioned to you each row is going to be relating to one article so I'm going
+[0:05:04]to copy the topic of this article the title of that and put it here.
+[0:05:09]So let's give some names to these columns for now this is going to be title and then
+[0:05:15]for that I'm looking for author list for the next column and then for the next column I'm
+[0:05:21]looking at year for the next one I'm looking for ui for the next one I'm looking for the
+[0:05:29]categories of this paper.
+[0:05:30]So for example if I go back you know that this first paper was for so let's see our
+[0:05:37]year this one is our one right for residence first year and then I have the category the
+[0:05:44]level of the article as well so this level here is going to be basic okay but you know
+[0:05:49]levels could be different things and obviously you can even come up with some sort of nice
+[0:05:54]formatting here because this is already either basic intermediate or advanced as far as I
+[0:05:59]know so let's let's give it some you know nice drop-down format here so I'm going to
+[0:06:07]come up with a drop-down and then obviously the second category here is going to be intermediate
+[0:06:13]and then the second category is gonna be you know intermediate and then it's gonna be advanced
+[0:06:22]all right and yeah so maybe we can also give each category a nice color here we go and
+[0:06:33]then this is done okay all right so and r1 could also be a drop-down you know because
+[0:06:41]we have r1 r2 r3 r4 radiology residencies for a year so let's keep this on r1 as this
+[0:06:47]is a drop-down menu as well so we have r2 we have r3 and we have r4 again I'm going
+[0:06:55]to use colors let's use some bolder colors this time right like for example this green
+[0:07:02]this one for example okay and that's yeah that's not a good color let's stop this one
+[0:07:09]okay so and again okay so here we are going to chart these articles obviously you know
+[0:07:17]I want you to kind of adjust this screen so that it's visually very pleasant I am personally
+[0:07:23]very much obsessed with removing all the unnecessary columns here so let's get rid of those columns
+[0:07:29]and then what I want you to do is that I want you to put together the author list and everything
+[0:07:33]extract those from the basically article page and put it here so here oh I forgot an important
+[0:07:41]column the column should be abstract so let's put the abstract here as well all right and we don't
+[0:07:47]need this much of you know long abstract column for this one good configuration that we might
+[0:07:53]be able to do even from the beginning is to make sure that all the cells are wrapped so now for
+[0:07:59]the sake of abstract obviously I'm coming here I'm going to copy everything right click copy put
+[0:08:06]it here there we go with the abstract oh sorry I made a mistake this should not be wrapped this
+[0:08:11]should be this should be this one what's the name of that text wrapping so basically no I don't want
+[0:08:19]this to be that's you know long another thing that you can do that is a trick that I always use is
+[0:08:25]that you know whenever I have this abstract copy from here instead of just coming and pasting it
+[0:08:32]here directly because it has some sort of extra lines and things like that so I just go to my
+[0:08:37]browser's address bar and paste it there and then copy it or cut it again from there so this way
+[0:08:44]all these unnecessary characters or illegal characters are going to be removed and we have
+[0:08:50]a very simple text that could be paced in the abstract and then let's also quickly extract the
+[0:08:56]outer least we have the outer least here again I don't really care about coming up with the
+[0:09:02]bullet points for this outer least but one thing that maybe we can do is that we can just simply
+[0:09:06]paste it in you know the address bar copy it again and then come up and pasting it here now
+[0:09:14]you might see that you know somehow we have this extra spaces here you know I'm a very obsessive
+[0:09:19]person so I would appreciate it if you can just at least get rid of those so that later on in my
+[0:09:25]python project or whatever in the application I have I should I mean I do not need to deal with
+[0:09:31]this kind of extra spaces okay so we have the auto release the abstract the title and then let's
+[0:09:37]extract the doi the doi is a link and for doi we don't need to put it in address bar let's just
+[0:09:42]quickly paste it there what else do we want and obviously the year so the year you can see that
+[0:09:47]this is for 2019 so just type 2019 here okay and this is how I extracted the first paper on the
+[0:09:54]list so obviously I can go back and now I can do the same thing for the second paper here let's
+[0:10:00]quickly do this as well so this is a virus paper the abstract is actually very short this time
+[0:10:06]so you might or might not want to do this if the abstract is very short and you are pretty much
+[0:10:10]sure that there are no extra characters here you can simply go ahead and paste it without necessarily
+[0:10:15]pasting that into the address bar and then we have the authors again for the sake of authors
+[0:10:22]I'm going to paste it in address bar and then copy and paste it again from there oh I made a
+[0:10:27]mistake here I believe so let's do that again copy from here a state copy it a state make sure there
+[0:10:35]are no spaces here because I'm super mad about these spaces the year is 2019 again and the doi
+[0:10:45]copy it come here paste it this was for r1 again and oh see that we needed to actually come in that
+[0:10:55]nice drop down format so I guess what nothing that we need to do in the beginning is to basically
+[0:11:00]copy this and paste it and then adjust it for example if it is r2 r3 r4 adjusted but in this
+[0:11:06]case it's again r1 and basic and yeah so what I want you to do is that I want you to go back to
+[0:11:12]this list and follow the same task that I did follow the same process as I did for all the papers
+[0:11:20]on all the cut all the years all the levels for all the topics so for example here is all the
+[0:11:26]things for uh you know uh r1 residents and in the best category but if you go back one level
+[0:11:34]then we have cardiac that cardiac itself has a long list of articles if you go back then we have
+[0:11:41]you know many many different categories and I want you to follow this basically for everything
+[0:11:47]right I want all the articles already in this either each of these categories to be indexed
+[0:11:52]exactly as I did here and then when you are done try to make this a little bit beautiful
+[0:11:58]you know maybe bold the titles you know for example if you end up with 50 articles I want
+[0:12:04]the extra rows to also be deleted because I'm very obsessive about how beautiful this
+[0:12:09]switch is going to turn out and then yeah at the end uh you know when you are over notify the user
+[0:12:15]that your uh you know excel file your google spreadsheet file is ready exactly as you want it
+[0:12:22]this is the process that I want you to follow and yeah that's it so let's see what you do
+[0:12:39]you
