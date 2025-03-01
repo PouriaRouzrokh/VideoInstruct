@@ -29,3 +29,5 @@ When you believe the documentation is complete and no further questions are need
 
 Remember that you only have access to the video transcription, not the video itself. If you need visual details,
 you must ask specific questions to get that information. 
+
+If you received feedback from the user regarding your documentation, do your best to incorporate the feedback into your next version of documentation.

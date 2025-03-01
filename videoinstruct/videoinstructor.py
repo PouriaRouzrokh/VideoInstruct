@@ -1,8 +1,11 @@
 import os
 import time
+import datetime
 from typing import List, Optional, Dict, Any, Union, Tuple
 import json
 import re
+import base64
+from markdown_pdf import MarkdownPdf, Section
 
 from videoinstruct.agents.VideoInterpreter import VideoInterpreter
 from videoinstruct.agents.DocGenerator import DocGenerator
@@ -55,10 +58,15 @@ class VideoInstructor:
         if not os.path.exists(self.config.temp_dir):
             os.makedirs(self.config.temp_dir)
         
+        # Create a timestamped directory for this session
+        self.timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
+        self.session_dir = os.path.join(self.config.output_dir, self.timestamp)
+        os.makedirs(self.session_dir, exist_ok=True)
+        
         # Initialize DocGenerator with configuration
         self.doc_generator = DocGenerator(
             config=self.config.doc_generator_config,
-            output_dir=self.config.output_dir
+            output_dir=self.session_dir
         )
         
         # Initialize VideoInterpreter with configuration
@@ -70,6 +78,9 @@ class VideoInstructor:
         self.doc_evaluator = DocEvaluator(
             config=self.config.doc_evaluator_config
         )
+        
+        # Track document versions
+        self.doc_version = 0
         
         # Load video and transcription if provided
         if video_path:
@@ -167,6 +178,9 @@ class VideoInstructor:
             # Try to parse as JSON
             json_response = json.loads(response)
             if isinstance(json_response, dict) and "type" in json_response and "content" in json_response:
+                # If the response has a type field, ensure it's one of our valid types
+                if json_response["type"] not in [ResponseType.DOCUMENTATION, ResponseType.QUESTION]:
+                    json_response["type"] = ResponseType.DOCUMENTATION
                 return DocGeneratorResponse(**json_response)
         except json.JSONDecodeError:
             pass
@@ -192,27 +206,112 @@ class VideoInstructor:
         # Default to documentation
         return DocGeneratorResponse(type=ResponseType.DOCUMENTATION, content=response)
     
-    def _evaluate_documentation(self, documentation: str) -> Tuple[bool, str]:
+    def _save_documentation(self, documentation: str, is_final: bool = False) -> str:
+        """
+        Save the documentation to a file with version tracking.
+        
+        Args:
+            documentation: The documentation content to save.
+            is_final: Whether this is the final approved version.
+            
+        Returns:
+            The path to the saved file.
+        """
+        if not documentation:
+            return ""
+        
+        base_filename = "documentation"
+        
+        # Add version number and final suffix if applicable
+        if is_final:
+            filename = f"{base_filename}_final.md"
+        else:
+            self.doc_version += 1
+            filename = f"{base_filename}_v{self.doc_version}.md"
+        
+        # Full path to save the file
+        file_path = os.path.join(self.session_dir, filename)
+        
+        # Save documentation to file
+        with open(file_path, 'w') as f:
+            f.write(documentation)
+        
+        print(f"Documentation saved to {file_path}")
+        
+        # Generate PDF version of the documentation
+        pdf_path = os.path.splitext(file_path)[0] + ".pdf"
+        try:
+            # Create a MarkdownPdf instance
+            pdf = MarkdownPdf()
+            
+            # Add the documentation as a section
+            pdf.add_section(Section(documentation))
+            
+            # Set metadata
+            pdf.meta["title"] = os.path.basename(pdf_path)
+            pdf.meta["author"] = "VideoInstructor"
+            
+            # Save the PDF
+            pdf.save(pdf_path)
+            print(f"PDF version saved to {pdf_path}")
+        except Exception as e:
+            print(f"Error generating PDF: {str(e)}")
+        
+        return file_path
+    
+    def _evaluate_documentation(self, documentation: str, print_documentation: bool = True) -> Tuple[bool, str]:
         """
         Evaluate the documentation using the DocEvaluator.
         
         Args:
             documentation: The documentation to evaluate.
+            print_documentation: Whether to print the documentation to the console.
             
         Returns:
             A tuple of (is_approved, feedback)
         """
-        # Show the documentation to the user before evaluation
-        print("\n" + "="*50)
-        print("GENERATED DOCUMENTATION:")
-        print("="*50)
-        print(documentation)
-        print("\n" + "="*50)
+        # Show the documentation to the user before evaluation if requested
+        if print_documentation:
+            print("\n" + "="*50)
+            print("GENERATED DOCUMENTATION:")
+            print("="*50)
+            print(documentation)
+            print("\n" + "="*50)
         
         print("EVALUATING DOCUMENTATION...")
-        print("="*50)
         
-        is_approved, feedback = self.doc_evaluator.evaluate_documentation(documentation)
+        # Find the PDF file path based on the current version
+        pdf_path = os.path.join(self.session_dir, f"documentation_v{self.doc_version}.pdf")
+        
+        # Check if PDF exists
+        if os.path.exists(pdf_path):
+            try:
+                # Read the PDF file
+                with open(pdf_path, 'rb') as file:
+                    pdf_data = file.read()
+                
+                # Encode the PDF as base64
+                encoded_pdf = base64.b64encode(pdf_data).decode("utf-8")
+                base64_url = f"data:application/pdf;base64,{encoded_pdf}"
+                
+                # Create content with both text and PDF
+                content = [
+                    {"type": "text", "text": f"""
+                    Please evaluate the following documentation for quality, clarity, and completeness.
+                    The documentation is provided as PDF.
+                    """},
+                    {"type": "image_url", "image_url": base64_url}
+                ]
+                
+                # Evaluate with PDF
+                is_approved, feedback = self.doc_evaluator.evaluate_documentation_with_pdf(content)
+            except Exception as e:
+                print(f"Error processing PDF for evaluation: {str(e)}")
+                # Fall back to text-only evaluation
+                is_approved, feedback = self.doc_evaluator.evaluate_documentation(documentation)
+        else:
+            # Fall back to text-only evaluation
+            is_approved, feedback = self.doc_evaluator.evaluate_documentation(documentation)
         
         if is_approved:
             print("Documentation APPROVED by DocEvaluator")
@@ -239,25 +338,30 @@ class VideoInstructor:
         Returns:
             A tuple of (feedback, is_satisfied)
         """
-        print("\n" + "="*50)
-        print("CURRENT DOCUMENTATION:")
-        print("="*50)
-        print(documentation)
-        print("\n" + "="*50)
-        
-        # We no longer show the evaluation history to the user
-        # Just show the most recent feedback if available
+        # Show the most recent feedback if available
+        most_recent_feedback = ""
         if self.doc_evaluator.feedback_history and len(self.doc_evaluator.feedback_history) > 0:
-            print("\nMost recent DocEvaluator feedback:")
-            print(self.doc_evaluator.feedback_history[-1])
-            print("\n" + "="*50)
+            most_recent_feedback = self.doc_evaluator.feedback_history[-1]
+            print("\nMost recent evaluator feedback:")
+            print(most_recent_feedback)
+        
+        # Check if PDF exists and inform the user
+        pdf_path = os.path.join(self.session_dir, f"documentation_v{self.doc_version}.pdf")
+        if os.path.exists(pdf_path):
+            print(f"\nA PDF version of the documentation is available at: {pdf_path}")
         
         while True:
             user_input = input("\nAre you satisfied with this documentation? (yes/no): ").strip().lower()
             if user_input in ['yes', 'y']:
+                # Save the final version with _final suffix (this will also generate the PDF)
+                md_path = self._save_documentation(documentation, is_final=True)
                 return "", True
             elif user_input in ['no', 'n']:
-                feedback = input("Please provide feedback to improve the documentation: ")
+                feedback = input("Please provide feedback to improve the documentation (press Enter to use evaluator's feedback): ")
+                # If user just presses Enter, use the most recent feedback from the evaluator
+                if not feedback.strip() and most_recent_feedback:
+                    print(f"Using evaluator's feedback: {most_recent_feedback}")
+                    return most_recent_feedback, False
                 return feedback, False
             else:
                 print("Please answer 'yes' or 'no'.")
@@ -286,21 +390,14 @@ class VideoInstructor:
         
         return user_answer
     
-    def generate_documentation(self) -> str:
+    def _prepare_initial_prompt(self) -> str:
         """
-        Generate step-by-step documentation from the loaded video.
+        Prepare the initial prompt for documentation generation by combining
+        the transcription and a detailed description from the VideoInterpreter.
         
         Returns:
-            The generated documentation as a string.
+            A formatted initial prompt string for the DocGenerator.
         """
-        if not self.transcription:
-            raise ValueError("No transcription available. Please load a video or transcription first.")
-        
-        print("Starting documentation generation workflow...")
-        
-        # Reset DocEvaluator memory at the start of a new documentation generation
-        self.doc_evaluator.reset_memory()
-        
         # First, get a detailed step-by-step description from the VideoInterpreter
         print("Getting initial step-by-step description from VideoInterpreter...")
         initial_description = self.video_interpreter.respond(
@@ -310,7 +407,7 @@ class VideoInstructor:
         )
         print("Initial description received from VideoInterpreter.")
         
-        # Set transcription and initial description in DocGenerator
+        # Prepare the initial prompt with transcription and description
         print("Preparing DocGenerator with transcription and initial description...")
         initial_prompt = f"""
         You will be creating a step-by-step guide based on a video.
@@ -328,6 +425,29 @@ class VideoInstructor:
         Using both the transcription and the video description, create a comprehensive step-by-step guide.
         If you have any questions or need clarification about specific parts of the video, please ask.
         """
+        
+        return initial_prompt
+    
+    def generate_documentation(self) -> str:
+        """
+        Generate step-by-step documentation from the loaded video.
+        
+        Returns:
+            The generated documentation as a string.
+        """
+        if not self.transcription:
+            raise ValueError("No transcription available. Please load a video or transcription first.")
+        
+        print("Starting documentation generation workflow...")
+        
+        # Reset DocEvaluator memory at the start of a new documentation generation
+        self.doc_evaluator.reset_memory()
+        
+        # Reset document version counter
+        self.doc_version = 0
+        
+        # Prepare the initial prompt
+        initial_prompt = self._prepare_initial_prompt()
         
         # Initialize counters
         iteration_count = 0
@@ -360,14 +480,28 @@ class VideoInstructor:
                 response = self.doc_generator.refine_documentation(f"ANSWER: {answer}")
                 structured_response = self._get_structured_response(response)
             
-            elif structured_response.type in [ResponseType.DOCUMENTATION, ResponseType.COMPLETE]:
+            elif structured_response.type == ResponseType.DOCUMENTATION:
                 current_documentation = structured_response.content
+                
+                # Save the current version of the documentation
+                self._save_documentation(current_documentation)
+                
+                # Print the documentation when it's first generated or refined
+                print("\n" + "="*50)
+                print("GENERATED DOCUMENTATION:")
+                print("="*50)
+                print(current_documentation)
+                print("\n" + "="*50)
                 
                 # First, let the DocEvaluator evaluate the documentation
                 evaluation_count = self.doc_evaluator.rejection_count + 1
                 print(f"\nEvaluation round #{evaluation_count}")
-                is_approved, feedback = self._evaluate_documentation(current_documentation)
                 
+                # Don't print the documentation during evaluation since we just printed it
+                is_approved, feedback = self._evaluate_documentation(current_documentation, print_documentation=False)
+                
+                print(f"Evaluator's feedback: {feedback}")
+
                 # Check if we should escalate to user due to repeated rejections
                 if not is_approved and self.doc_evaluator.should_escalate_to_user():
                     print("\n" + "="*50)
@@ -416,10 +550,9 @@ class VideoInstructor:
                         # User is satisfied, break the loop
                         break
         
-        # Save the final documentation
+        # Return the final documentation
         if current_documentation:
-            file_path = self.doc_generator.save_documentation()
-            print(f"\nFinal documentation saved to: {file_path}")
+            print(f"\nFinal documentation saved in: {self.session_dir}")
             return current_documentation
         else:
             print("No documentation was generated.")

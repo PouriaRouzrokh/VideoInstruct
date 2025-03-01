@@ -31,10 +31,10 @@ def main():
     # Get API keys from environment variables
     openai_api_key = os.getenv("OPENAI_API_KEY")
     gemini_api_key = os.getenv("GEMINI_API_KEY")
-    deepseek_api_key = os.getenv("DEEPSEEK_API_KEY")
+    anthropic_api_key = os.getenv("ANTHROPIC_API_KEY")
     
-    if not openai_api_key or not gemini_api_key or not deepseek_api_key:
-        print("Error: API keys not found. Please set OPENAI_API_KEY, GEMINI_API_KEY, and DEEPSEEK_API_KEY in your .env file.")
+    if not openai_api_key or not gemini_api_key or not anthropic_api_key:
+        print("Error: API keys not found. Please set OPENAI_API_KEY, GEMINI_API_KEY, and ANTHROPIC_API_KEY in your .env file.")
         return
     
     # Configure the VideoInstructor
@@ -57,9 +57,9 @@ def main():
         
         # DocEvaluator configuration
         doc_evaluator_config=DocEvaluatorConfig(
-            api_key=deepseek_api_key,
-            model_provider="deepseek",
-            model="deepseek-reasoner", 
+            api_key=anthropic_api_key,
+            model_provider="anthropic",
+            model="claude-3-7-sonnet-latest", 
             temperature=0.2,
             max_rejection_count=3  # Number of rejections before escalating to user
         ),
