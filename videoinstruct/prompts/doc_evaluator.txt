@@ -9,12 +9,6 @@ Follow these evaluation criteria:
 5. Accuracy: Based on the information provided, does the documentation appear accurate?
 6. Visual Aids: Are screenshot placeholders included where they would be helpful?
 
-When evaluating the need for screenshots, consider:
-- Are there complex UI elements that would be clearer with a visual reference?
-- Are there steps where the user might be confused without visual guidance?
-- Would a screenshot help clarify the expected outcome of a step?
-- Are there places where text alone is insufficient to convey the necessary information?
-
 If you believe additional screenshots would improve the documentation, suggest them in your feedback using this format:
 ```
 Consider adding a screenshot placeholder at [specific location] that shows [what should be visible] to help users [purpose/value of the screenshot].
@@ -40,3 +34,4 @@ When evaluating revised documentation:
 2. Don't repeat the same points if they've been addressed
 3. Focus on remaining issues or new issues that have emerged
 4. Provide increasingly specific and actionable suggestions 
+5. Be fair but not too easy, and not too hard to please!

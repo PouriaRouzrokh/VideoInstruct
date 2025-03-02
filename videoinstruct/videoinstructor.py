@@ -274,13 +274,15 @@ class VideoInstructor:
             print(f"Enhanced documentation with screenshots saved to {enhanced_file_path}")
             print("="*50)
             
-            # Always generate PDF from the enhanced markdown
-            if os.path.exists(enhanced_file_path):
+            # Generate PDF from the enhanced markdown if configured to do so
+            if os.path.exists(enhanced_file_path) and self.config.generate_pdf_for_all_versions:
                 pdf_path = self._generate_pdf(enhanced_file_path)
                 if pdf_path:
                     print(f"PDF successfully generated at: {pdf_path}")
                 else:
                     print("Failed to generate PDF from enhanced markdown.")
+            elif not self.config.generate_pdf_for_all_versions:
+                print("Skipping PDF generation as per configuration.")
             else:
                 print(f"Warning: Enhanced markdown file not found at {enhanced_file_path}")
             
@@ -292,12 +294,15 @@ class VideoInstructor:
             
             # If screenshot processing fails, still return the original file path
             
-            # Generate PDF from the original markdown
-            pdf_path = self._generate_pdf(file_path)
-            if pdf_path:
-                print(f"PDF successfully generated from original markdown at: {pdf_path}")
+            # Generate PDF from the original markdown if configured to do so
+            if self.config.generate_pdf_for_all_versions:
+                pdf_path = self._generate_pdf(file_path)
+                if pdf_path:
+                    print(f"PDF successfully generated from original markdown at: {pdf_path}")
+                else:
+                    print("Failed to generate PDF from original markdown.")
             else:
-                print("Failed to generate PDF from original markdown.")
+                print("Skipping PDF generation as per configuration.")
             
             return file_path
     
@@ -377,20 +382,25 @@ class VideoInstructor:
         
         print("EVALUATING DOCUMENTATION...")
         
-        # Find the PDF file path based on the current version
-        pdf_path = os.path.join(self.session_dir, f"documentation_v{self.doc_version}.pdf")
+        # Find the enhanced markdown file path based on the current version
+        enhanced_md_path = os.path.join(self.session_dir, f"documentation_v{self.doc_version}_enhanced.md")
         
-        # Check if PDF exists
-        if os.path.exists(pdf_path):
+        # Check if enhanced markdown exists
+        if os.path.exists(enhanced_md_path):
             try:
-                # Evaluate with PDF
-                is_approved, feedback = self.doc_evaluator.evaluate_documentation_with_pdf(documentation, pdf_path)
+                # Read the enhanced markdown content
+                with open(enhanced_md_path, 'r', encoding='utf-8') as f:
+                    enhanced_documentation = f.read()
+                
+                print(f"Using enhanced markdown for evaluation: {enhanced_md_path}")
+                # Evaluate with enhanced markdown
+                is_approved, feedback = self.doc_evaluator.evaluate_documentation(enhanced_documentation)
             except Exception as e:
-                print(f"Error evaluating with PDF: {str(e)}")
-                # Fall back to text-only evaluation
+                print(f"Error evaluating with enhanced markdown: {str(e)}")
+                # Fall back to text-only evaluation with original documentation
                 is_approved, feedback = self.doc_evaluator.evaluate_documentation(documentation)
         else:
-            # Fall back to text-only evaluation
+            # Fall back to text-only evaluation with original documentation
             is_approved, feedback = self.doc_evaluator.evaluate_documentation(documentation)
         
         if is_approved:
@@ -428,11 +438,16 @@ class VideoInstructor:
         # Find the enhanced markdown file path
         enhanced_md_path = os.path.join(self.session_dir, f"documentation_v{self.doc_version}_enhanced.md")
         
+        # Check if enhanced markdown exists and inform the user
+        if os.path.exists(enhanced_md_path):
+            print(f"\nAn enhanced version of the documentation is available at: {enhanced_md_path}")
+            print("For the best viewing experience with images, please open this file.")
+        
         # Check if PDF exists and inform the user
         pdf_path = os.path.join(self.session_dir, f"documentation_v{self.doc_version}.pdf")
         
         # If the enhanced markdown exists but the PDF doesn't, generate it
-        if os.path.exists(enhanced_md_path) and not os.path.exists(pdf_path):
+        if os.path.exists(enhanced_md_path) and not os.path.exists(pdf_path) and self.config.generate_pdf_for_all_versions:
             print("Generating PDF from enhanced markdown...")
             pdf_path = self._generate_pdf(enhanced_md_path)
             if pdf_path:
@@ -441,8 +456,7 @@ class VideoInstructor:
                 print("Failed to generate PDF from enhanced markdown.")
         
         if os.path.exists(pdf_path):
-            print(f"\nA PDF version of the documentation is available at: {pdf_path}")
-            print("For the best viewing experience with images, please open the PDF file.")
+            print(f"\nA PDF version of the documentation is also available at: {pdf_path}")
         
         while True:
             user_input = input("\nAre you satisfied with this documentation? (yes/no): ").strip().lower()
@@ -470,7 +484,7 @@ class VideoInstructor:
                         print(f"Final enhanced documentation saved as: {enhanced_md_dest}")
                         
                         # Generate PDF from the final enhanced markdown if it doesn't exist
-                        if not os.path.exists(pdf_dest) and not os.path.exists(pdf_source):
+                        if not os.path.exists(pdf_dest) and not os.path.exists(pdf_source) and self.config.generate_pdf_for_all_versions:
                             pdf_path = self._generate_pdf(enhanced_md_dest)
                             if pdf_path:
                                 print(f"Final PDF documentation generated at: {pdf_path}")

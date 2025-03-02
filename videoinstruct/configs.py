@@ -40,8 +40,8 @@ class DocGeneratorConfig(BaseModel):
 class DocEvaluatorConfig(BaseModel):
     """Configuration for the DocEvaluator class."""
     api_key: Optional[str] = None
-    model_provider: str = Field(default="anthropic")
-    model: str = Field(default="claude-3-7-sonnet-latest")
+    model_provider: str = Field(default="deepseek")
+    model: str = Field(default="deepseek-reasoner")
     system_instruction: str = Field(default=DOC_EVALUATOR_SYSTEM_PROMPT)
     max_output_tokens: Optional[int] = None
     temperature: float = Field(default=0.2)

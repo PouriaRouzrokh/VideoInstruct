@@ -142,17 +142,16 @@ class DocEvaluator:
     def evaluate_documentation_with_pdf(self, documentation: str, pdf_path: str) -> Tuple[bool, str]:
         """
         Evaluate the quality of the provided documentation with PDF.
+        This method is kept for backward compatibility but now uses text-based evaluation.
         
         Args:
             documentation: The documentation content as text.
-            pdf_path: Path to the PDF file.
+            pdf_path: Path to the PDF file (not used).
             
         Returns:
             A tuple of (is_approved, feedback)
         """
-        # For simplicity, we'll just use the text-based evaluation
-        # since we've removed the HTML/base64 functionality
-        print(f"PDF available at {pdf_path}, but using text-based evaluation for simplicity")
+        print(f"PDF available at {pdf_path}, but using text-based evaluation as per configuration")
         return self.evaluate_documentation(documentation)
     
     def should_escalate_to_user(self) -> bool:
