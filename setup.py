@@ -8,14 +8,14 @@ with open("requirements.txt", "r", encoding="utf-8") as fh:
 
 setup(
     name="videoinstruct",
-    version="0.1.0",
+    version="0.1.1",
     author="Pouria Rouzrokh",
     author_email="po.rouzrokh@gmail.com",
     description="A tool that automatically generates step-by-step documentation from instructional videos",
     long_description=long_description,
     long_description_content_type="text/markdown",
     url="https://github.com/PouriaRouzrokh/VideoInstruct",
-    packages=find_packages(),
+    packages=find_packages(include=["videoinstruct", "videoinstruct.*"]),
     classifiers=[
         "Programming Language :: Python :: 3",
         "License :: OSI Approved :: MIT License",
@@ -25,7 +25,7 @@ setup(
     install_requires=requirements,
     include_package_data=True,
     package_data={
-        "videoinstruct": ["prompts/*.md"],
+        "videoinstruct": ["prompts/*.md", "prompts/*.txt", "prompts/*.json"],
     },
     entry_points={
         "console_scripts": [

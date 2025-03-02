@@ -15,7 +15,7 @@ tiktoken==0.9.0
 
 # Video and image processing
 moviepy==2.1.2
-Pillow==11.1.0
+Pillow<11.0
 opencv-python==4.11.0.86
 numpy==1.26.4
 

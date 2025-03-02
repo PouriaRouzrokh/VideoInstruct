@@ -20,8 +20,7 @@ VideoInstruct is a tool that automatically generates step-by-step documentation 
 VideoInstruct/
 ├── data/                  # Place your video files here
 ├── examples/              # Example usage scripts
-│   ├── example_usage.py   # Basic example script
-│   └── package_usage.py   # Example of using as a package
+│   ├── example_usage.py   # Basic example with repository structure
 ├── output/                # Generated documentation output
 ├── videoinstruct/         # Main package
 │   ├── agents/            # AI agent modules
@@ -58,7 +57,7 @@ VideoInstruct/
 
 ## Installation
 
-### From PyPI (Coming Soon)
+### From PyPI
 
 ```bash
 pip install videoinstruct
@@ -85,6 +84,26 @@ pip install videoinstruct
    GEMINI_API_KEY=your_gemini_api_key
    DEEPSEEK_API_KEY=your_deepseek_api_key
    ```
+
+## Examples
+
+The repository includes two example scripts to help you get started:
+
+1. **example_usage.py**: Demonstrates direct usage with the repository structure and hardcoded paths. This is useful if you're working directly with the repository without installing it as a package.
+
+2. **package_usage.py**: Shows how to use VideoInstruct after it's been installed as a package. This example demonstrates:
+   - Using VideoInstruct as an imported Python package in your code
+   - Using VideoInstruct from the command line
+
+To run the examples:
+
+```bash
+# Run the basic example
+python examples/example_usage.py
+
+# Run the package usage example
+python examples/package_usage.py
+```
 
 ## Using as a Python Package
 
