@@ -2,8 +2,7 @@ from google import genai
 from google.genai import types
 import time
 import os
-from typing import List, Optional, Dict, Any, Union
-from pydantic import BaseModel, Field
+from typing import Optional
 from IPython.display import Markdown
 
 from videoinstruct.configs import VideoInterpreterConfig

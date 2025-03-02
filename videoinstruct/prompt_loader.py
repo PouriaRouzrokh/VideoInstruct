@@ -1,8 +1,6 @@
 """
 This module loads system prompts from text files in the prompts directory.
 """
-
-import os
 from pathlib import Path
 
 # Get the directory where this file is located

@@ -1,10 +1,9 @@
 import os
 import time
-from typing import List, Optional, Dict, Any, Union
+from typing import List, Optional, Dict
 import json
 import litellm
 from IPython.display import Markdown
-import markdown
 import re
 
 from videoinstruct.configs import DocGeneratorConfig

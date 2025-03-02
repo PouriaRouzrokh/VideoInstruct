@@ -4,10 +4,6 @@ import sys
 from typing import Optional
 from PIL import Image
 from google import generativeai as genai
-from io import BytesIO
-import cv2
-import ast
-import shutil
 
 # Add the parent directory to the Python path so we can import our modules
 current_dir = os.path.dirname(os.path.abspath(__file__))

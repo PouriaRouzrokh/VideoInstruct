@@ -1,5 +1,4 @@
-import os
-from typing import List, Optional, Dict, Any, Union, ClassVar
+from typing import List, Optional, Dict, Any, ClassVar
 from pydantic import BaseModel, Field
 
 from videoinstruct.prompt_loader import (

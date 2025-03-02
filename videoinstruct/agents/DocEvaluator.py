@@ -1,8 +1,6 @@
 import os
-import time
 import re
-from typing import List, Optional, Dict, Any, Union, Tuple
-import json
+from typing import List, Optional, Dict, Tuple
 import litellm
 
 from videoinstruct.configs import DocEvaluatorConfig

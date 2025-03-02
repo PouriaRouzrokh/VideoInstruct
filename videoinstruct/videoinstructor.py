@@ -1,12 +1,8 @@
 import os
-import time
 import datetime
-from typing import List, Optional, Dict, Any, Union, Tuple
+from typing import Optional, Tuple
 import json
 import re
-import base64
-import markdown
-import subprocess
 import shutil
 from videoinstruct.agents.VideoInterpreter import VideoInterpreter
 from videoinstruct.agents.DocGenerator import DocGenerator
