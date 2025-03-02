@@ -17,6 +17,7 @@ def ImageAnnotatorTool(
             - 'bbox' (List[int]): Bounding box coordinates [x1, y1, x2, y2].
             - 'color' (str): Color name for the bounding box (e.g., 'red', 'green').
             - 'id' (str): ID label for the bounding box (e.g., 'A', 'B', 'C').
+            - 'description' (str, optional): Description text to display next to the bounding box.
             - 'destination_id' (str, optional): ID of the box to connect to with an arrow.
         settings (Dict, optional): Configuration settings including:
             - 'line_thickness' (int): Thickness of bounding box lines (default: 2).
@@ -25,6 +26,7 @@ def ImageAnnotatorTool(
             - 'arrow_color' (str): Color for arrows (default: 'blue').
             - 'arrow_thickness' (int): Thickness of arrows (default: 2).
             - 'arrow_tip_length' (float): Length of arrow tip (default: 0.03).
+            - 'description_offset' (int): Vertical offset for description text (default: 15).
     
     Returns:
         np.ndarray: Annotated image as a NumPy array.
@@ -36,7 +38,8 @@ def ImageAnnotatorTool(
         'text_thickness': 2,
         'arrow_color': 'blue',
         'arrow_thickness': 2,
-        'arrow_tip_length': 0.1
+        'arrow_tip_length': 0.1,
+        'description_offset': 15
     }
     
     # Update default settings with provided settings
@@ -75,6 +78,7 @@ def ImageAnnotatorTool(
         bbox = box.get('bbox', [0, 0, 0, 0])
         color_name = box.get('color', 'red')
         box_id = box.get('id', '')
+        description = box.get('description', '')
         
         # Get color in BGR format
         color = color_map.get(color_name.lower(), (0, 0, 255))  # Default to red if color not found
@@ -99,6 +103,19 @@ def ImageAnnotatorTool(
             color,
             settings['text_thickness']
         )
+        
+        # Draw description text if provided
+        if description:
+            description_position = (bbox[0], bbox[3] + settings['description_offset'])
+            cv2.putText(
+                image,
+                description,
+                description_position,
+                cv2.FONT_HERSHEY_SIMPLEX,
+                settings['text_scale'],
+                color,
+                settings['text_thickness']
+            )
     
     # Draw arrows
     for box in bounding_boxes:

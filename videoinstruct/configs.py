@@ -2,7 +2,11 @@ import os
 from typing import List, Optional, Dict, Any, Union, ClassVar
 from pydantic import BaseModel, Field
 
-from videoinstruct.prompt_loader import DOC_GENERATOR_SYSTEM_PROMPT, DOC_EVALUATOR_SYSTEM_PROMPT
+from videoinstruct.prompt_loader import (
+    DOC_GENERATOR_SYSTEM_PROMPT, 
+    DOC_EVALUATOR_SYSTEM_PROMPT,
+    SCREENSHOT_AGENT_SYSTEM_PROMPT
+)
 
 
 class VideoInterpreterConfig(BaseModel):
@@ -47,6 +51,18 @@ class DocEvaluatorConfig(BaseModel):
     max_rejection_count: int = Field(default=3)
 
 
+class ScreenshotAgentConfig(BaseModel):
+    """Configuration for the ScreenshotAgent class."""
+    api_key: Optional[str] = None
+    model: str = Field(default="gemini-2.0-flash")
+    system_instruction: str = Field(default=SCREENSHOT_AGENT_SYSTEM_PROMPT)
+    max_output_tokens: Optional[int] = None
+    temperature: float = Field(default=0.2)
+    top_p: Optional[float] = None
+    top_k: Optional[int] = None
+    seed: Optional[int] = None
+
+
 class ResponseType(BaseModel):
     """Enum-like class for response types from DocGenerator."""
     DOCUMENTATION: ClassVar[str] = "documentation"
@@ -65,7 +81,9 @@ class VideoInstructorConfig(BaseModel):
     doc_generator_config: DocGeneratorConfig = Field(default_factory=DocGeneratorConfig)
     video_interpreter_config: VideoInterpreterConfig = Field(default_factory=VideoInterpreterConfig)
     doc_evaluator_config: DocEvaluatorConfig = Field(default_factory=DocEvaluatorConfig)
+    screenshot_agent_config: ScreenshotAgentConfig = Field(default_factory=ScreenshotAgentConfig)
     max_iterations: int = Field(default=10)
     user_feedback_interval: int = Field(default=5)
     output_dir: str = Field(default="output")
-    temp_dir: str = Field(default="temp") 
+    temp_dir: str = Field(default="temp")
+    generate_pdf_for_all_versions: bool = Field(default=True)  # Whether to generate PDFs for all versions, not just final 

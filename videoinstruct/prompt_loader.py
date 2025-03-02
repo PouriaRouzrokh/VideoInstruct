@@ -30,5 +30,6 @@ def load_prompt(filename):
 # Load all prompts
 DOC_GENERATOR_SYSTEM_PROMPT = load_prompt("doc_generator.txt")
 DOC_EVALUATOR_SYSTEM_PROMPT = load_prompt("doc_evaluator.txt")
+SCREENSHOT_AGENT_SYSTEM_PROMPT = load_prompt("screenshot_agent.txt")
 
 # Add any additional prompts here as they are created 

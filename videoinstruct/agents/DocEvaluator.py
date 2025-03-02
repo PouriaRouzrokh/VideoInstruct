@@ -139,93 +139,21 @@ class DocEvaluator:
         
         return is_approved, feedback
     
-    def evaluate_documentation_with_pdf(self, content: List[Dict[str, Any]]) -> Tuple[bool, str]:
+    def evaluate_documentation_with_pdf(self, documentation: str, pdf_path: str) -> Tuple[bool, str]:
         """
         Evaluate the quality of the provided documentation with PDF.
         
         Args:
-            content: The documentation content as a list of message content objects
-                    containing both text and PDF as image_url.
+            documentation: The documentation content as text.
+            pdf_path: Path to the PDF file.
             
         Returns:
             A tuple of (is_approved, feedback)
         """
-        # Prepare the message with the PDF content
-        if len(self.conversation_history) == 1:  # Only system message exists
-            # First evaluation
-            user_message = {
-                "role": "user", 
-                "content": content
-            }
-        else:
-            # Subsequent evaluation (revision)
-            # Add a note about revision to the text part
-            content[0]["text"] = "I've revised the documentation based on your feedback. " + content[0]["text"]
-            user_message = {
-                "role": "user", 
-                "content": content
-            }
-        
-        # Add user message to conversation history
-        self.conversation_history.append(user_message)
-        
-        # Create a copy of the conversation history for the API call
-        # We need to do this because litellm might not handle the complex content structure correctly
-        api_conversation = []
-        for msg in self.conversation_history:
-            api_conversation.append(msg.copy())
-        
-        # Get response from LLM using the full conversation history
-        response = self._get_llm_response(api_conversation)
-        
-        # Add assistant response to conversation history
-        self.conversation_history.append({"role": "assistant", "content": response})
-        
-        # Extract Python code from the response using regex
-        python_code_match = re.search(r'```python\s*({.*?})\s*```', response, re.DOTALL)
-        
-        if python_code_match:
-            # Extract the Python dictionary code
-            python_code = python_code_match.group(1).strip()
-            
-            try:
-                # Safely evaluate the Python code
-                result = eval(python_code)
-                
-                # Check if the result is a dictionary with the expected keys
-                if isinstance(result, dict) and "approved" in result and "feedback" in result:
-                    is_approved = bool(result["approved"])
-                    feedback = str(result["feedback"])
-                    
-                    # Store feedback in history if it's a rejection
-                    if not is_approved:
-                        self.feedback_history.append(feedback)
-                        self.rejection_count += 1
-                    else:
-                        self.rejection_count = 0
-                    
-                    return is_approved, feedback
-            except Exception as e:
-                print(f"Error evaluating Python code: {str(e)}")
-        
-        # Fallback: Use heuristics to determine approval
-        is_approved = "approved" in response.lower() and not any(x in response.lower() for x in ["reject", "not approved", "disapproved"])
-        
-        # Extract feedback using regex if possible
-        feedback_match = re.search(r'feedback["\']:\s*["\'](.+?)["\']', response, re.DOTALL | re.IGNORECASE)
-        if feedback_match:
-            feedback = feedback_match.group(1)
-        else:
-            feedback = response
-        
-        # Store feedback in history if it's a rejection
-        if not is_approved:
-            self.feedback_history.append(feedback)
-            self.rejection_count += 1
-        else:
-            self.rejection_count = 0
-        
-        return is_approved, feedback
+        # For simplicity, we'll just use the text-based evaluation
+        # since we've removed the HTML/base64 functionality
+        print(f"PDF available at {pdf_path}, but using text-based evaluation for simplicity")
+        return self.evaluate_documentation(documentation)
     
     def should_escalate_to_user(self) -> bool:
         """

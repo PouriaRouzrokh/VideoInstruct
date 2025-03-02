@@ -5,16 +5,16 @@ from typing import List, Optional, Dict, Any, Union, Tuple
 import json
 import re
 import base64
-from markdown_pdf import MarkdownPdf, Section
-
+import markdown
+import subprocess
+import shutil
 from videoinstruct.agents.VideoInterpreter import VideoInterpreter
 from videoinstruct.agents.DocGenerator import DocGenerator
 from videoinstruct.agents.DocEvaluator import DocEvaluator
+from videoinstruct.agents.ScreenshotAgent import ScreenshotAgent
 from videoinstruct.utils.transcription import transcribe_video
+from videoinstruct.utils.md2pdf import markdown_to_pdf, clean_markdown
 from videoinstruct.configs import (
-    VideoInterpreterConfig, 
-    DocGeneratorConfig, 
-    DocEvaluatorConfig,
     ResponseType,
     DocGeneratorResponse,
     VideoInstructorConfig
@@ -23,14 +23,15 @@ from videoinstruct.configs import (
 
 class VideoInstructor:
     """
-    A class that orchestrates the workflow between DocGenerator, VideoInterpreter, and DocEvaluator.
+    A class that orchestrates the workflow between DocGenerator, VideoInterpreter, DocEvaluator, and ScreenshotAgent.
     
     This class handles:
     1. Video transcription extraction
     2. Passing transcription to DocGenerator
     3. Managing the Q&A flow between DocGenerator and VideoInterpreter
     4. Evaluating documentation quality with DocEvaluator
-    5. Collecting user feedback and refining documentation
+    5. Processing screenshots with ScreenshotAgent
+    6. Collecting user feedback and refining documentation
     """
     
     def __init__(
@@ -79,6 +80,14 @@ class VideoInstructor:
             config=self.config.doc_evaluator_config
         )
         
+        # Initialize ScreenshotAgent with configuration
+        self.screenshot_agent = ScreenshotAgent(
+            config=self.config.screenshot_agent_config,
+            video_interpreter=self.video_interpreter,
+            video_path=self.video_path,
+            output_dir=self.session_dir
+        )
+        
         # Track document versions
         self.doc_version = 0
         
@@ -98,6 +107,9 @@ class VideoInstructor:
         """
         print(f"Loading video from {video_path}...")
         self.video_path = video_path
+        
+        # Update video path for ScreenshotAgent
+        self.screenshot_agent.set_video_path(video_path)
         
         # Load video into VideoInterpreter
         self.video_interpreter.load_video(video_path)
@@ -208,56 +220,141 @@ class VideoInstructor:
     
     def _save_documentation(self, documentation: str, is_final: bool = False) -> str:
         """
-        Save the documentation to a file with version tracking.
+        Save the documentation to a file.
         
         Args:
             documentation: The documentation content to save.
-            is_final: Whether this is the final approved version.
+            is_final: Whether this is the final version of the documentation.
             
         Returns:
-            The path to the saved file.
+            The path to the saved documentation file.
         """
-        if not documentation:
-            return ""
-        
-        base_filename = "documentation"
-        
-        # Add version number and final suffix if applicable
-        if is_final:
-            filename = f"{base_filename}_final.md"
-        else:
+        # Increment version number if not final
+        if not is_final:
             self.doc_version += 1
-            filename = f"{base_filename}_v{self.doc_version}.md"
-        
-        # Full path to save the file
+            
+        # Create a filename based on version number
+        version_suffix = "_final" if is_final else f"_v{self.doc_version}"
+        filename = f"documentation{version_suffix}.md"
         file_path = os.path.join(self.session_dir, filename)
         
-        # Save documentation to file
+        # Save the documentation to a file
         with open(file_path, 'w') as f:
             f.write(documentation)
         
         print(f"Documentation saved to {file_path}")
         
-        # Generate PDF version of the documentation
-        pdf_path = os.path.splitext(file_path)[0] + ".pdf"
+        # Process screenshots
         try:
-            # Create a MarkdownPdf instance
-            pdf = MarkdownPdf()
+            # Check if there are any screenshot placeholders in the documentation
+            screenshot_pattern = r'\[SCREENSHOT_PLACEHOLDER\](.*?)\[/SCREENSHOT_PLACEHOLDER\]'
+            screenshot_matches = list(re.finditer(screenshot_pattern, documentation, re.DOTALL))
             
-            # Add the documentation as a section
-            pdf.add_section(Section(documentation))
+            if not screenshot_matches:
+                print("No screenshot placeholders found in the documentation.")
+            else:
+                print(f"Found {len(screenshot_matches)} screenshot placeholders in the documentation.")
             
-            # Set metadata
-            pdf.meta["title"] = os.path.basename(pdf_path)
-            pdf.meta["author"] = "VideoInstructor"
+            print("\n" + "="*50)
+            print("PROCESSING SCREENSHOTS")
+            print("="*50)
             
-            # Save the PDF
-            pdf.save(pdf_path)
-            print(f"PDF version saved to {pdf_path}")
+            # Verify that video_path and video_interpreter are set
+            if not self.screenshot_agent.video_path:
+                print("WARNING: No video path set for ScreenshotAgent. Screenshots cannot be processed.")
+                raise ValueError("No video path set for ScreenshotAgent")
+            
+            if not self.screenshot_agent.video_interpreter:
+                print("WARNING: No VideoInterpreter set for ScreenshotAgent. Screenshots cannot be processed.")
+                raise ValueError("No VideoInterpreter set for ScreenshotAgent")
+            
+            # Process markdown file with screenshots
+            enhanced_file_path = self.screenshot_agent.process_markdown_file(file_path)
+            print("\n" + "="*50)
+            print(f"Enhanced documentation with screenshots saved to {enhanced_file_path}")
+            print("="*50)
+            
+            # Always generate PDF from the enhanced markdown
+            if os.path.exists(enhanced_file_path):
+                pdf_path = self._generate_pdf(enhanced_file_path)
+                if pdf_path:
+                    print(f"PDF successfully generated at: {pdf_path}")
+                else:
+                    print("Failed to generate PDF from enhanced markdown.")
+            else:
+                print(f"Warning: Enhanced markdown file not found at {enhanced_file_path}")
+            
+            return enhanced_file_path
         except Exception as e:
-            print(f"Error generating PDF: {str(e)}")
+            print(f"Error processing screenshots: {str(e)}")
+            import traceback
+            traceback.print_exc()
+            
+            # If screenshot processing fails, still return the original file path
+            
+            # Generate PDF from the original markdown
+            pdf_path = self._generate_pdf(file_path)
+            if pdf_path:
+                print(f"PDF successfully generated from original markdown at: {pdf_path}")
+            else:
+                print("Failed to generate PDF from original markdown.")
+            
+            return file_path
+    
+    def _generate_pdf(self, markdown_path: str) -> str:
+        """
+        Generate a PDF from a Markdown file using the md2pdf utility.
         
-        return file_path
+        Args:
+            markdown_path: Path to the Markdown file
+            
+        Returns:
+            Path to the generated PDF file, or None if generation failed
+        """
+        try:
+            print(f"Generating PDF from markdown: {markdown_path}")
+            
+            if not os.path.exists(markdown_path):
+                print(f"Error: Markdown file not found at {markdown_path}")
+                return None
+                
+            # Read the markdown content
+            with open(markdown_path, 'r', encoding='utf-8') as f:
+                md_text = f.read()
+            
+            # Clean the Markdown text using the utility function
+            cleaned_md_text = clean_markdown(md_text)
+            
+            # Create a temporary markdown file with the cleaned content
+            temp_md_path = f"{os.path.splitext(markdown_path)[0]}_enhanced.md"
+            with open(temp_md_path, 'w', encoding='utf-8') as f:
+                f.write(cleaned_md_text)
+            
+            # Define the output PDF path
+            pdf_path = f"{os.path.splitext(markdown_path)[0]}.pdf"
+            
+            # Determine the base directory from the Markdown file's absolute path
+            base_path = os.path.dirname(os.path.abspath(markdown_path))
+            
+            # Generate the PDF with images resolved relative to the Markdown file's directory
+            markdown_to_pdf(cleaned_md_text, pdf_path, base_path)
+            
+            # Verify the PDF was created
+            if os.path.exists(pdf_path):
+                print(f"PDF generated successfully: {pdf_path}")
+                
+                # Clean up temporary file
+                if os.path.exists(temp_md_path):
+                    os.remove(temp_md_path)
+                    
+                return pdf_path
+            else:
+                print("PDF generation failed: Output file not found")
+                return None
+                
+        except Exception as e:
+            print(f"Error in _generate_pdf: {str(e)}")
+            return None
     
     def _evaluate_documentation(self, documentation: str, print_documentation: bool = True) -> Tuple[bool, str]:
         """
@@ -286,27 +383,10 @@ class VideoInstructor:
         # Check if PDF exists
         if os.path.exists(pdf_path):
             try:
-                # Read the PDF file
-                with open(pdf_path, 'rb') as file:
-                    pdf_data = file.read()
-                
-                # Encode the PDF as base64
-                encoded_pdf = base64.b64encode(pdf_data).decode("utf-8")
-                base64_url = f"data:application/pdf;base64,{encoded_pdf}"
-                
-                # Create content with both text and PDF
-                content = [
-                    {"type": "text", "text": f"""
-                    Please evaluate the following documentation for quality, clarity, and completeness.
-                    The documentation is provided as PDF.
-                    """},
-                    {"type": "image_url", "image_url": base64_url}
-                ]
-                
                 # Evaluate with PDF
-                is_approved, feedback = self.doc_evaluator.evaluate_documentation_with_pdf(content)
+                is_approved, feedback = self.doc_evaluator.evaluate_documentation_with_pdf(documentation, pdf_path)
             except Exception as e:
-                print(f"Error processing PDF for evaluation: {str(e)}")
+                print(f"Error evaluating with PDF: {str(e)}")
                 # Fall back to text-only evaluation
                 is_approved, feedback = self.doc_evaluator.evaluate_documentation(documentation)
         else:
@@ -345,16 +425,62 @@ class VideoInstructor:
             print("\nMost recent evaluator feedback:")
             print(most_recent_feedback)
         
+        # Find the enhanced markdown file path
+        enhanced_md_path = os.path.join(self.session_dir, f"documentation_v{self.doc_version}_enhanced.md")
+        
         # Check if PDF exists and inform the user
         pdf_path = os.path.join(self.session_dir, f"documentation_v{self.doc_version}.pdf")
+        
+        # If the enhanced markdown exists but the PDF doesn't, generate it
+        if os.path.exists(enhanced_md_path) and not os.path.exists(pdf_path):
+            print("Generating PDF from enhanced markdown...")
+            pdf_path = self._generate_pdf(enhanced_md_path)
+            if pdf_path:
+                print(f"PDF successfully generated at: {pdf_path}")
+            else:
+                print("Failed to generate PDF from enhanced markdown.")
+        
         if os.path.exists(pdf_path):
             print(f"\nA PDF version of the documentation is available at: {pdf_path}")
+            print("For the best viewing experience with images, please open the PDF file.")
         
         while True:
             user_input = input("\nAre you satisfied with this documentation? (yes/no): ").strip().lower()
             if user_input in ['yes', 'y']:
-                # Save the final version with _final suffix (this will also generate the PDF)
-                md_path = self._save_documentation(documentation, is_final=True)
+                # Rename the last version of the documentation with _final suffix
+                try:
+                    # Get the source files (both markdown and PDF if available)
+                    md_source = os.path.join(self.session_dir, f"documentation_v{self.doc_version}.md")
+                    enhanced_md_source = os.path.join(self.session_dir, f"documentation_v{self.doc_version}_enhanced.md")
+                    pdf_source = os.path.join(self.session_dir, f"documentation_v{self.doc_version}.pdf")
+                    
+                    # Create the destination paths with _final suffix
+                    md_dest = os.path.join(self.session_dir, f"documentation_final.md")
+                    enhanced_md_dest = os.path.join(self.session_dir, f"documentation_final_enhanced.md")
+                    pdf_dest = os.path.join(self.session_dir, f"documentation_final.pdf")
+                    
+                    # Rename the markdown file
+                    if os.path.exists(md_source):
+                        shutil.copy2(md_source, md_dest)
+                        print(f"Final documentation saved as: {md_dest}")
+                    
+                    # Rename the enhanced markdown file if it exists
+                    if os.path.exists(enhanced_md_source):
+                        shutil.copy2(enhanced_md_source, enhanced_md_dest)
+                        print(f"Final enhanced documentation saved as: {enhanced_md_dest}")
+                        
+                        # Generate PDF from the final enhanced markdown if it doesn't exist
+                        if not os.path.exists(pdf_dest) and not os.path.exists(pdf_source):
+                            pdf_path = self._generate_pdf(enhanced_md_dest)
+                            if pdf_path:
+                                print(f"Final PDF documentation generated at: {pdf_path}")
+                    
+                    # Copy the PDF file if it exists
+                    if os.path.exists(pdf_source):
+                        shutil.copy2(pdf_source, pdf_dest)
+                        print(f"Final PDF documentation saved as: {pdf_dest}")
+                except Exception as e:
+                    print(f"Warning: Could not create final documentation copies: {str(e)}")
                 return "", True
             elif user_input in ['no', 'n']:
                 feedback = input("Please provide feedback to improve the documentation (press Enter to use evaluator's feedback): ")
@@ -557,35 +683,3 @@ class VideoInstructor:
         else:
             print("No documentation was generated.")
             return ""
-
-
-# Example usage
-if __name__ == "__main__":
-    # Initialize VideoInstructor with a video file
-    instructor = VideoInstructor(
-        video_path="data/example_video.mp4",  # Place your video file in the data directory
-        config=VideoInstructorConfig(
-            # Set API keys in the configs
-            doc_generator_config=DocGeneratorConfig(
-                api_key=os.getenv("OPENAI_API_KEY"),
-                model_provider="openai",
-                model="gpt-4o"
-            ),
-            video_interpreter_config=VideoInterpreterConfig(
-                api_key=os.getenv("GEMINI_API_KEY"),
-                model="gemini-2.0-flash"
-            ),
-            doc_evaluator_config=DocEvaluatorConfig(
-                api_key=os.getenv("DEEPSEEK_API_KEY"),
-                model_provider="deepseek",
-                model="deepseek-reasoner"
-            ),
-            user_feedback_interval=3,  # Get user feedback every 3 iterations
-            max_iterations=15
-        )
-    )
-    
-    # Generate documentation
-    documentation = instructor.generate_documentation()
-    
-    print("\nDocumentation generation complete!")
