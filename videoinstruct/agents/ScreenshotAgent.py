@@ -184,6 +184,7 @@ class ScreenshotAgent:
                     screenshot_path = self._get_screenshot_path()
                     if not replace_existing and os.path.exists(screenshot_path):
                         print(f"Skipping screenshot #{self.screenshot_counter} because it already exists: {screenshot_path}")
+                        self.screenshot_counter += 1
                         continue
                     
                     if not os.path.exists(screenshot_path):
