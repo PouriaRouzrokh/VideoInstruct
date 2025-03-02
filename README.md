@@ -11,6 +11,8 @@ VideoInstruct is a tool that automatically generates step-by-step documentation 
 - Interactive Q&A workflow between AI agents
 - User feedback integration for documentation refinement
 - Configurable escalation to human users
+- Screenshot generation and annotation
+- PDF export capabilities
 
 ## Project Structure
 
@@ -18,16 +20,31 @@ VideoInstruct is a tool that automatically generates step-by-step documentation 
 VideoInstruct/
 ├── data/                  # Place your video files here
 ├── examples/              # Example usage scripts
+│   ├── example_usage.py   # Basic example script
+│   └── package_usage.py   # Example of using as a package
 ├── output/                # Generated documentation output
-├── temp/                  # Temporary files (transcriptions, etc.)
 ├── videoinstruct/         # Main package
 │   ├── agents/            # AI agent modules
-│   │   ├── DocGenerator.py    # Documentation generation agent
-│   │   ├── DocEvaluator.py    # Documentation evaluation agent
-│   │   └── VideoInterpreter.py # Video interpretation agent
+│   │   ├── DocGenerator.py      # Documentation generation agent
+│   │   ├── DocEvaluator.py      # Documentation evaluation agent
+│   │   ├── VideoInterpreter.py  # Video interpretation agent
+│   │   └── ScreenshotAgent.py   # Screenshot generation agent
+│   ├── prompts/           # System prompts for agents
+│   ├── tools/             # Utility tools
+│   │   ├── image_annotator.py   # Image annotation tools
+│   │   └── video_screenshot.py  # Video screenshot tools
 │   ├── utils/             # Utility functions
-│   │   └── transcription.py   # Video transcription utilities
+│   │   ├── transcription.py     # Video transcription utilities
+│   │   └── md2pdf.py            # Markdown to PDF conversion
+│   ├── cli.py             # Command-line interface
+│   ├── configs.py         # Configuration classes
+│   ├── prompt_loader.py   # Prompt loading utilities
 │   └── videoinstructor.py # Main orchestration class
+├── .env                   # Environment variables (API keys)
+├── MANIFEST.in            # Package manifest file
+├── pyproject.toml         # Python project configuration
+├── requirements.txt       # Package dependencies
+├── setup.py               # Package setup file
 └── README.md              # This file
 ```
 
@@ -41,19 +58,25 @@ VideoInstruct/
 
 ## Installation
 
+### From PyPI (Coming Soon)
+
+```bash
+pip install videoinstruct
+```
+
+### From Source
+
 1. Clone the repository:
 
-   ```
-   git clone https://github.com/yourusername/VideoInstruct.git
+   ```bash
+   git clone https://github.com/PouriaRouzrokh/VideoInstruct.git
    cd VideoInstruct
    ```
 
-2. Create a virtual environment and install dependencies:
+2. Install the package in development mode:
 
-   ```
-   python -m venv venv
-   source venv/bin/activate  # On Windows: venv\Scripts\activate
-   pip install -r requirements.txt
+   ```bash
+   pip install -e .
    ```
 
 3. Create a `.env` file in the root directory with your API keys:
@@ -63,25 +86,67 @@ VideoInstruct/
    DEEPSEEK_API_KEY=your_deepseek_api_key
    ```
 
-## Usage
+## Using as a Python Package
 
-1. Place your video file in the `data` directory.
+You can use VideoInstruct as a Python package in your own projects:
 
-2. Run the example script:
+```python
+from videoinstruct import VideoInstructor, VideoInstructorConfig
+from videoinstruct.agents.DocGenerator import DocGeneratorConfig
+from videoinstruct.agents.VideoInterpreter import VideoInterpreterConfig
+from videoinstruct.agents.DocEvaluator import DocEvaluatorConfig
+from pathlib import Path
 
-   ```
-   python examples/example_usage.py
-   ```
+# Create configuration
+config = VideoInstructorConfig(
+    doc_generator_config=DocGeneratorConfig(
+        model="gpt-4o-mini",
+        temperature=0.7,
+        max_output_tokens=4000
+    ),
+    video_interpreter_config=VideoInterpreterConfig(
+        model="gemini-2.0-flash",
+        temperature=0.7
+    ),
+    doc_evaluator_config=DocEvaluatorConfig(
+        model="deepseek/deepseek-reasoner",
+        temperature=0.2,
+        max_rejection_count=3
+    ),
+    user_feedback_interval=3,
+    max_iterations=15,
+    output_dir="output",
+    temp_dir="temp"
+)
 
-3. The script will:
-   - Extract the transcription from your video
-   - Get a detailed description from the VideoInterpreter
-   - Generate step-by-step documentation using the DocGenerator
-   - Ask questions to the VideoInterpreter when needed
-   - Evaluate documentation quality using the DocEvaluator
-   - Escalate to human user after a configurable number of rejections
-   - Collect your feedback to refine the documentation
-   - Save the final documentation to the `output` directory
+# Initialize VideoInstructor
+instructor = VideoInstructor(config)
+
+# Process a video
+video_path = Path("path/to/your/video.mp4")
+output_path = instructor.process_video(video_path)
+
+print(f"Documentation generated successfully: {output_path}")
+```
+
+## Using the Command Line Interface
+
+VideoInstruct comes with a command-line interface:
+
+```bash
+# Basic usage
+videoinstruct path/to/your/video.mp4
+
+# With custom options
+videoinstruct path/to/your/video.mp4 \
+    --output-dir custom_output \
+    --temp-dir custom_temp \
+    --max-iterations 10 \
+    --user-feedback-interval 2 \
+    --doc-generator-model "gpt-4o" \
+    --video-interpreter-model "gemini-2.0-pro" \
+    --doc-evaluator-model "deepseek/deepseek-reasoner"
+```
 
 ## Workflow
 
@@ -97,41 +162,17 @@ VideoInstruct follows this workflow:
    - Escalates to human user after a configurable number of rejections
 6. **Refinement**: Documentation is refined based on evaluator feedback
 7. **User Feedback**: User provides final approval or additional feedback
-8. **Output**: Final documentation is saved as markdown
+8. **Output**: Final documentation is saved as markdown and optionally as PDF
 
-## Customization
+## Development
 
-You can customize the behavior of VideoInstruct by modifying the configuration parameters:
+To contribute to VideoInstruct:
 
-```python
-config = VideoInstructorConfig(
-    # DocGenerator configuration
-    doc_generator_config=DocGeneratorConfig(
-        model="gpt-4o-mini",  # Change to any supported model
-        temperature=0.7,
-        max_output_tokens=4000
-    ),
-
-    # VideoInterpreter configuration
-    video_interpreter_config=VideoInterpreterConfig(
-        model="gemini-2.0-flash",  # Change to any supported Gemini model
-        temperature=0.7
-    ),
-
-    # DocEvaluator configuration
-    doc_evaluator_config=DocEvaluatorConfig(
-        model="deepseek/deepseek-reasoner",  # Change to any supported model
-        temperature=0.2,
-        max_rejection_count=3  # Number of rejections before escalating to user
-    ),
-
-    # VideoInstructor configuration
-    user_feedback_interval=3,  # Get user feedback every 3 iterations
-    max_iterations=15,
-    output_dir="output",
-    temp_dir="temp"
-)
-```
+1. Fork the repository
+2. Create a feature branch: `git checkout -b feature-name`
+3. Commit your changes: `git commit -am 'Add some feature'`
+4. Push to the branch: `git push origin feature-name`
+5. Submit a pull request
 
 ## License
 

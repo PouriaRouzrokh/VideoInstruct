@@ -9,6 +9,9 @@ from videoinstruct.prompt_loader import (
     SCREENSHOT_AGENT_SYSTEM_PROMPT
 )
 
+# Version of the package
+__version__ = "0.1.0"
+
 __all__ = [
     'VideoInstructor',
     'VideoInstructorConfig',
@@ -22,5 +25,6 @@ __all__ = [
     'ScreenshotAgentConfig',
     'DOC_GENERATOR_SYSTEM_PROMPT',
     'DOC_EVALUATOR_SYSTEM_PROMPT',
-    'SCREENSHOT_AGENT_SYSTEM_PROMPT'
+    'SCREENSHOT_AGENT_SYSTEM_PROMPT',
+    '__version__'
 ]
