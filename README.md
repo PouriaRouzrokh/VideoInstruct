@@ -118,53 +118,45 @@ from pathlib import Path
 
 # Create configuration
 config = VideoInstructorConfig(
-    doc_generator_config=DocGeneratorConfig(
-        model="gpt-4o-mini",
-        temperature=0.7,
-        max_output_tokens=4000
-    ),
-    video_interpreter_config=VideoInterpreterConfig(
-        model="gemini-2.0-flash",
-        temperature=0.7
-    ),
-    doc_evaluator_config=DocEvaluatorConfig(
-        model="deepseek/deepseek-reasoner",
-        temperature=0.2,
-        max_rejection_count=3
-    ),
-    user_feedback_interval=3,
-    max_iterations=15,
-    output_dir="output",
-    temp_dir="temp"
-)
+        # DocGenerator configuration
+        doc_generator_config=DocGeneratorConfig(
+            api_key=openai_api_key,
+            model_provider="openai",
+            model="o3-mini",
+            temperature=0.7,
+            max_output_tokens=4000
+        ),
 
-# Initialize VideoInstructor
-instructor = VideoInstructor(config)
+        # VideoInterpreter configuration
+        video_interpreter_config=VideoInterpreterConfig(
+            api_key=gemini_api_key,
+            model="gemini-2.0-flash",  # You can change this to any supported Gemini model
+            temperature=0.7
+        ),
+
+        # DocEvaluator configuration
+        doc_evaluator_config=DocEvaluatorConfig(
+            api_key=deepseek_api_key,
+            model_provider="deepseek",
+            model="deepseek-reasoner",
+            temperature=0.2,
+            max_rejection_count=3  # Number of rejections before escalating to user
+        ),
+
+        # VideoInstructor configuration
+        user_feedback_interval=3,  # Get user feedback every 3 iterations
+        max_iterations=15,
+        output_dir="output",
+        temp_dir="temp"
+    )
 
 # Process a video
-video_path = Path("path/to/your/video.mp4")
-output_path = instructor.process_video(video_path)
+video_path = Path("RG_Drive_Demonsration.mp4")
 
-print(f"Documentation generated successfully: {output_path}")
-```
+# Initialize VideoInstructor
+instructor = VideoInstructor(video_path = video_path, config=config)
 
-## Using the Command Line Interface
-
-VideoInstruct comes with a command-line interface:
-
-```bash
-# Basic usage
-videoinstruct path/to/your/video.mp4
-
-# With custom options
-videoinstruct path/to/your/video.mp4 \
-    --output-dir custom_output \
-    --temp-dir custom_temp \
-    --max-iterations 10 \
-    --user-feedback-interval 2 \
-    --doc-generator-model "gpt-4o" \
-    --video-interpreter-model "gemini-2.0-pro" \
-    --doc-evaluator-model "deepseek/deepseek-reasoner"
+instructor.process_video(video_path)
 ```
 
 ## Workflow
