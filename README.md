@@ -156,7 +156,8 @@ video_path = Path("RG_Drive_Demonsration.mp4")
 # Initialize VideoInstructor
 instructor = VideoInstructor(video_path = video_path, config=config)
 
-instructor.process_video(video_path)
+# Generate the documentation
+documentation = instructor.generate_documentation()
 ```
 
 ## Workflow
