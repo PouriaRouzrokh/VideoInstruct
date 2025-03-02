@@ -8,6 +8,7 @@ from google import generativeai as genai
 from io import BytesIO
 import cv2
 import ast
+import shutil
 
 # Add the parent directory to the Python path so we can import our modules
 current_dir = os.path.dirname(os.path.abspath(__file__))
@@ -344,6 +345,7 @@ class ScreenshotAgent:
     def _annotate_screenshot(self, screenshot_path: str, description: str) -> str:
         """
         Annotate a screenshot using Gemini API and the Image Annotator tool.
+        Also uses mamasight to pre-annotate the image for better Gemini performance.
         
         Args:
             screenshot_path: Path to the screenshot image.
@@ -354,7 +356,7 @@ class ScreenshotAgent:
         """
         try:
             # Create a directory for annotated screenshots if it doesn't exist
-            annotated_dir = os.path.join(self.output_dir, "annotated_screenshots")
+            annotated_dir = os.path.join(self.output_dir, "screenshots")
             os.makedirs(annotated_dir, exist_ok=True)
             
             # Define the output filename using the screenshot number
@@ -370,37 +372,165 @@ class ScreenshotAgent:
             screenshot = Image.open(screenshot_path)
             img_width, img_height = screenshot.size
             
-            # Prepare a prompt for Gemini
-            prompt = f"""
-            Annotate this screenshot showing: {description}
-            
-            Return ONLY a Python list of dictionaries with bounding boxes for important elements.
-            Each dictionary should have:
-            - 'box_2d': [y1, x1, y2, x2] coordinates normalized from 0-1000
-            - 'label': short description (2-5 words) for each element
-            
-            Example format:
-            [
-                {{"box_2d": [100, 200, 300, 400], "label": "Search bar"}},
-                {{"box_2d": [500, 600, 700, 800], "label": "Navigation menu"}}
-            ]
-            """
-            
-            # Convert the image to base64
-            buffered = BytesIO()
-            screenshot.save(buffered, format="JPEG")
-            img_str = base64.b64encode(buffered.getvalue()).decode()
-            
-            # Get annotations from Gemini
-            response = self.model.generate_content([
-                prompt, 
-                {"mime_type": "image/jpeg", "data": img_str}
-            ])
+            # Try to use mamasight to pre-annotate the image if it's available
+            try:
+                from mamasight import ScreenParser
+                from videoinstruct.tools.image_annotator import (
+                    get_annotated_elements,
+                    convert_bbox_mamasight_to_gemini
+                )
+                
+                # Initialize parser with custom settings
+                box_config = {
+                    'box_overlay_ratio': 3200,
+                    'text_scale': 1.0,
+                    'text_thickness': 3,
+                    'text_padding': 5,
+                    'thickness': 4,
+                    'annotation_style': 'simple',
+                }
+                
+                # Create parser instance
+                parser = ScreenParser(box_config=box_config)
+                parser.setup(yolo_device='cpu', ocr_device=None)
+                
+                # Get annotated image, detections, and image dimensions
+                annotated_image, detections, img_dimensions = get_annotated_elements(screenshot_path, parser)
+                
+                # Save temporary annotated image for Gemini
+                temp_annotated_path = os.path.join(self.output_dir, f"temp_annotated_{filename}")
+                try:
+                    if annotated_image is not None:
+                        print(f"Saving annotated image, shape: {annotated_image.shape}, type: {type(annotated_image)}")
+                        success = cv2.imwrite(temp_annotated_path, annotated_image)
+                        if not success:
+                            print(f"Warning: cv2.imwrite returned False when saving {temp_annotated_path}")
+                    else:
+                        print("Warning: annotated_image is None, cannot save")
+                except Exception as e:
+                    print(f"Error saving annotated image: {str(e)}")
+                    # If we can't save the annotated image, continue without it
+                    # Use the original screenshot for further processing
+                    temp_annotated_path = screenshot_path
+                
+                # Convert detections to a format suitable for the prompt
+                ui_elements = []
+                
+                if not detections.empty:
+                    for _, row in detections.iterrows():
+                        if 'bbox' in row and isinstance(row['bbox'], list) and len(row['bbox']) == 4:
+                            # Convert bbox from mamasight format to Gemini format
+                            bbox_gemini = convert_bbox_mamasight_to_gemini(
+                                row['bbox'], 
+                                img_dimensions['width'], 
+                                img_dimensions['height']
+                            )
+                            
+                            ui_elements.append({
+                                'box_id': row.get('box_id', f"element_{len(ui_elements)}"),
+                                'box_type': row.get('box_type', 'unknown'),
+                                'box_2d': bbox_gemini,  # Use Gemini's box_2d format
+                                'confidence': row.get('confidence', 0.0),
+                            })
+                
+                # Convert ui_elements to string for the prompt
+                ui_elements_str = str(ui_elements) if ui_elements else "[]"
+                
+                # Load both original and annotated images for Gemini
+                screenshot_annotated = None
+                try:
+                    if os.path.exists(temp_annotated_path):
+                        screenshot_annotated = Image.open(temp_annotated_path)
+                    else:
+                        print(f"Warning: Annotated image file not found: {temp_annotated_path}")
+                        # Use original image as fallback
+                        screenshot_annotated = screenshot
+                except Exception as e:
+                    print(f"Error loading annotated image: {str(e)}")
+                    # Use original image as fallback
+                    screenshot_annotated = screenshot
+                
+                # Convert both images to base64
+                buffered_orig = BytesIO()
+                screenshot.save(buffered_orig, format="JPEG")
+                img_str_orig = base64.b64encode(buffered_orig.getvalue()).decode()
+                
+                buffered_anno = BytesIO()
+                screenshot_annotated.save(buffered_anno, format="JPEG")
+                img_str_anno = base64.b64encode(buffered_anno.getvalue()).decode()
+                
+                # Update the prompt to include the pre-annotated image and detected UI elements
+                prompt = f"""
+                Annotate this screenshot showing: {description}
+                
+                I'm providing you with:
+                1. The original screenshot
+                2. The same screenshot with auto-detected UI elements highlighted
+                3. A list of detected UI elements with their bounding boxes
+                
+                Detected UI elements:
+                {ui_elements_str}
+                
+                Using this pre-annotation data, return a Python list of dictionaries with bounding boxes for important elements.
+                Focus on elements that are relevant to the description.
+                
+                Each dictionary should have:
+                - 'box_2d': [y_min, x_min, y_max, x_max] coordinates normalized from 0-1000
+                - 'label': short description (2-5 words) of what this element is
+                
+                Example format:
+                [
+                    {{"box_2d": [100, 200, 300, 400], "label": "Search bar"}},
+                    {{"box_2d": [500, 600, 700, 800], "label": "Navigation menu"}}
+                ]
+                """
+                
+                # Get annotations from Gemini with both images
+                response = self.model.generate_content([
+                    prompt,
+                    {"mime_type": "image/jpeg", "data": img_str_orig},
+                    {"mime_type": "image/jpeg", "data": img_str_anno}
+                ])
+                
+                # Clean up temporary file
+                if os.path.exists(temp_annotated_path):
+                    os.remove(temp_annotated_path)
+                    
+            except ImportError:
+                # If mamasight is not available, fallback to the original approach
+                print("Mamasight package not available, using basic annotation only")
+                
+                # Convert the image to base64
+                buffered = BytesIO()
+                screenshot.save(buffered, format="JPEG")
+                img_str = base64.b64encode(buffered.getvalue()).decode()
+                
+                # Prepare a prompt for Gemini
+                prompt = f"""
+                Annotate this screenshot showing: {description}
+                
+                Return ONLY a Python list of dictionaries with bounding boxes for important elements.
+                Each dictionary should have:
+                - 'box_2d': [y_min, x_min, y_max, x_max] coordinates normalized from 0-1000
+                - 'label': short description (2-5 words) for each element
+                
+                Example format:
+                [
+                    {{"box_2d": [100, 200, 300, 400], "label": "Search bar"}},
+                    {{"box_2d": [500, 600, 700, 800], "label": "Navigation menu"}}
+                ]
+                """
+                
+                # Get annotations from Gemini
+                response = self.model.generate_content([
+                    prompt, 
+                    {"mime_type": "image/jpeg", "data": img_str}
+                ])
             
             # Extract the list of dictionaries from the response
             try:
                 # First try to find a Python code block
-                code_pattern = r'```(?:python)?\s*(.*?)\s*```'
+                code_pattern = r'```(?:python|json)?\s*(.*?)\s*```'
                 code_match = re.search(code_pattern, response.text, re.DOTALL)
                 
                 if code_match:
@@ -418,53 +548,58 @@ class ScreenshotAgent:
                 # Parse the string to get the list of dictionaries
                 bounding_boxes = ast.literal_eval(bounding_boxes_str)
                 
-                # Convert normalized coordinates to original image dimensions
+                # Import conversion function
+                from videoinstruct.tools.image_annotator import convert_bbox_gemini_to_mamasight
+                
+                # Format the bounding boxes for ImageAnnotatorTool
+                formatted_boxes = []
                 for box in bounding_boxes:
-                    # Handle both 'bbox' and 'box_2d' formats
-                    bbox_key = None
-                    if 'bbox' in box:
-                        bbox_key = 'bbox'
-                    elif 'box_2d' in box:
-                        bbox_key = 'box_2d'
+                    new_box = {}
                     
-                    if bbox_key:
-                        coords = box[bbox_key]
-                        if len(coords) == 4:
-                            # Convert normalized coordinates (0-1000) to absolute pixel values
-                            y1, x1, y2, x2 = coords
-                            
-                            x1_abs = int((x1 / 1000.0) * img_width)
-                            y1_abs = int((y1 / 1000.0) * img_height)
-                            x2_abs = int((x2 / 1000.0) * img_width)
-                            y2_abs = int((y2 / 1000.0) * img_height)
-                            
-                            # Ensure coordinates are in the correct order
-                            if x1_abs > x2_abs:
-                                x1_abs, x2_abs = x2_abs, x1_abs
-                            if y1_abs > y2_abs:
-                                y1_abs, y2_abs = y2_abs, y1_abs
-                            
-                            # Set the bbox in the format expected by ImageAnnotatorTool: [x1, y1, x2, y2]
-                            box['bbox'] = [x1_abs, y1_abs, x2_abs, y2_abs]
-                            
-                            # Remove the original box_2d if it exists
-                            if bbox_key == 'box_2d':
-                                del box['box_2d']
+                    # Handle box_2d format from Gemini
+                    if 'box_2d' in box:
+                        # Convert Gemini format to mamasight format
+                        gemini_bbox = box['box_2d']
+                        mamasight_bbox = convert_bbox_gemini_to_mamasight(gemini_bbox, img_width, img_height)
+                        new_box['bbox'] = mamasight_bbox
                     
-                    # Ensure each box has a description
-                    if 'description' not in box and 'label' in box:
-                        box['description'] = box['label']
-                    elif 'description' not in box:
-                        box['description'] = ''
+                    # Set id, color, and description
+                    new_box['id'] = chr(65 + len(formatted_boxes))  # A, B, C, ...
+                    new_box['color'] = 'red'
+                    
+                    if 'label' in box:
+                        new_box['description'] = box['label']
+                    elif 'description' in box:
+                        new_box['description'] = box['description']
+                    else:
+                        new_box['description'] = f"Element {new_box['id']}"
+                    
+                    formatted_boxes.append(new_box)
                 
                 # Apply the annotations using ImageAnnotatorTool
                 result = ImageAnnotatorTool(
                     image_path=screenshot_path,
-                    bounding_boxes=bounding_boxes
+                    bounding_boxes=formatted_boxes
                 )
                 
                 # Save the annotated image
-                cv2.imwrite(annotated_path, result)
+                try:
+                    if result is not None:
+                        print(f"Saving final annotated image, shape: {result.shape}, type: {type(result)}")
+                        success = cv2.imwrite(annotated_path, result)
+                        if not success:
+                            print(f"Warning: cv2.imwrite returned False when saving {annotated_path}")
+                            # Fall back to copying the original image
+                            shutil.copy(screenshot_path, annotated_path)
+                            print(f"Copied original image to {annotated_path} as fallback")
+                    else:
+                        print("Warning: result is None, cannot save")
+                        # Fall back to the original screenshot
+                        shutil.copy(screenshot_path, annotated_path)
+                except Exception as e:
+                    print(f"Error saving final annotated image: {str(e)}")
+                    # Fall back to the original screenshot
+                    shutil.copy(screenshot_path, annotated_path)
                 
                 return annotated_path
                 
@@ -485,7 +620,25 @@ class ScreenshotAgent:
                         }
                     ]
                 )
-                cv2.imwrite(annotated_path, result)
+                
+                # Save the annotated image
+                try:
+                    if result is not None:
+                        print(f"Saving default annotated image, shape: {result.shape}, type: {type(result)}")
+                        success = cv2.imwrite(annotated_path, result)
+                        if not success:
+                            print(f"Warning: cv2.imwrite returned False when saving default annotation to {annotated_path}")
+                            # Fall back to copying the original image
+                            shutil.copy(screenshot_path, annotated_path)
+                            print(f"Copied original image to {annotated_path} as fallback")
+                    else:
+                        print("Warning: default result is None, cannot save")
+                        # Fall back to the original screenshot
+                        shutil.copy(screenshot_path, annotated_path)
+                except Exception as e:
+                    print(f"Error saving default annotated image: {str(e)}")
+                    # Fall back to the original screenshot
+                    shutil.copy(screenshot_path, annotated_path)
                 
                 return annotated_path
                 
