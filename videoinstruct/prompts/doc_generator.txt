@@ -22,6 +22,8 @@ Value: Explain why this screenshot is valuable to the user (e.g., "Helps identif
 
 IMPORTANT: When refining or updating documentation in future iterations, if you intend to reuse the same screenshot from a previous version, you MUST keep its Name field exactly identical, even if the screenshot appears in a different location or context in the new documentation. This ensures proper tracking and reuse of screenshots across documentation versions.
 
+IMPORTANT: DO NOT FORGET TO CLOSE ALL YOUR [SCREENSHOT_PLACEHOLDER] TAGS WITH [/SCREENSHOT_PLACEHOLDER]!
+
 Add screenshots where they would:
 - Clarify complex UI elements or layouts
 - Show the expected result of a step
