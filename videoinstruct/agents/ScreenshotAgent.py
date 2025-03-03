@@ -1,7 +1,9 @@
 import os
 import re
 import sys
-from typing import Optional
+import json
+import time
+from typing import Optional, Dict, Any
 from PIL import Image
 from google import generativeai as genai
 
@@ -17,15 +19,7 @@ from videoinstruct.tools.video_screenshot import VideoScreenshotTool
 
 
 class ScreenshotAgent:
-    """
-    A class for extracting and integrating screenshots into Markdown documentation.
-    
-    This class handles:
-    1. Identifying screenshot placeholders in Markdown files
-    2. Requesting timestamps from VideoInterpreter
-    3. Extracting screenshots from videos
-    4. Integrating raw screenshots into Markdown files
-    """
+    """Agent for extracting and integrating screenshots into Markdown documentation."""
     
     def __init__(
         self,
@@ -34,28 +28,23 @@ class ScreenshotAgent:
         video_path: Optional[str] = None,
         output_dir: str = "output"
     ):
-        """
-        Initialize the ScreenshotAgent.
-        
-        Args:
-            config: Configuration for the Gemini model, including API key.
-            video_interpreter: Pre-instantiated VideoInterpreter agent.
-            video_path: Path to the video file.
-            output_dir: Directory to save the screenshots.
-        """
+        """Initialize the ScreenshotAgent with configuration and resources."""
         self.config = config or ScreenshotAgentConfig()
         self.video_interpreter = video_interpreter
         self.video_path = video_path
         self.output_dir = output_dir
-        # Counter for screenshot numbering
-        self.screenshot_counter = 1
+        
+        # Cache file path for storing screenshot mappings
+        self.cache_file = os.path.join(output_dir, "screenshot_cache.json")
+        # Screenshots cache: {normalized_name: screenshot_path}
+        self.screenshot_cache = self._load_screenshot_cache()
         
         # Get API key from config or environment variable
         self.api_key = self.config.api_key or os.getenv("GEMINI_API_KEY")
         if not self.api_key:
             raise ValueError("API key must be provided in config or set as GEMINI_API_KEY environment variable")
         
-        # Initialize Gemini client - set the API key
+        # Initialize Gemini client
         genai.api_key = self.api_key
         
         # Configure the model with system instruction
@@ -72,9 +61,6 @@ class ScreenshotAgent:
         if self.config.seed:
             generation_config["seed"] = self.config.seed
         
-        print(f"Initializing Screenshot Agent with model: {self.config.model}")
-        print(f"System instruction length: {len(self.config.system_instruction)} characters")
-            
         self.model = genai.GenerativeModel(
             model_name=self.config.model,
             generation_config=generation_config,
@@ -85,40 +71,48 @@ class ScreenshotAgent:
         if not os.path.exists(output_dir):
             os.makedirs(output_dir)
     
+    def _load_screenshot_cache(self) -> Dict[str, str]:
+        """Load screenshot cache from JSON file."""
+        if os.path.exists(self.cache_file):
+            try:
+                with open(self.cache_file, 'r') as f:
+                    return json.load(f)
+            except Exception:
+                print(f"Error loading screenshot cache from {self.cache_file}, creating new cache")
+                return {}
+        return {}
+    
+    def _save_screenshot_cache(self) -> None:
+        """Save screenshot cache to JSON file."""
+        try:
+            with open(self.cache_file, 'w') as f:
+                json.dump(self.screenshot_cache, f, indent=2)
+        except Exception as e:
+            print(f"Error saving screenshot cache: {str(e)}")
+    
+    def _normalize_name(self, name: str) -> str:
+        """Normalize screenshot name for consistent caching."""
+        # Convert to lowercase and remove whitespace
+        normalized = name.lower().strip()
+        # Replace spaces and special characters with underscores
+        normalized = re.sub(r'[^a-z0-9]', '_', normalized)
+        # Remove consecutive underscores
+        normalized = re.sub(r'_+', '_', normalized)
+        # Remove leading/trailing underscores
+        normalized = normalized.strip('_')
+        return normalized
+    
     def set_video_path(self, video_path: str) -> None:
-        """
-        Set the video file path.
-        
-        Args:
-            video_path: Path to the video file.
-        """
+        """Set the video file path."""
         self.video_path = video_path
     
     def set_video_interpreter(self, video_interpreter: VideoInterpreter) -> None:
-        """
-        Set the VideoInterpreter agent.
-        
-        Args:
-            video_interpreter: Pre-instantiated VideoInterpreter agent.
-        """
+        """Set the VideoInterpreter agent."""
         self.video_interpreter = video_interpreter
     
     def process_markdown_file(self, file_path: str, replace_existing: bool = False) -> str:
-        """
-        Process a markdown file, replacing screenshot placeholders with actual screenshots.
-        
-        Args:
-            file_path: Path to the markdown file
-            replace_existing: If True, replace existing screenshots with new ones
-        Returns:
-            Path to the enhanced markdown file
-        """
+        """Process a markdown file, replacing screenshot placeholders with actual screenshots."""
         try:
-            print(f"Processing markdown file: {file_path}")
-            
-            # Reset screenshot counter when processing a new file
-            self.screenshot_counter = 1
-            
             # Read the markdown file
             with open(file_path, 'r') as f:
                 content = f.read()
@@ -135,85 +129,99 @@ class ScreenshotAgent:
             content = re.sub(r'```(?:.*?)\s*\n(!\[.*?\]\(.*?\))\s*\n```', r'\1', content)
             content = re.sub(r'```(?:.*?)(!\[.*?\]\(.*?\))```', r'\1', content)
             
-            # Define regex pattern to identify screenshot placeholders in the format:
-            # [SCREENSHOT_PLACEHOLDER]...[/SCREENSHOT_PLACEHOLDER]
+            # Define regex pattern to identify screenshot placeholders
             pattern = r'\[SCREENSHOT_PLACEHOLDER\](.*?)\[/SCREENSHOT_PLACEHOLDER\]'
             
             # Find all matches
             matches = re.findall(pattern, content, re.DOTALL)
             
-            print(f"Found {len(matches)} screenshot placeholders")
-            
             # Process each match
             for idx, placeholder_content in enumerate(matches):
                 try:
-                    # Parse the placeholder content to extract description
-                    description = placeholder_content.strip()
+                    # Extract the name from the placeholder
+                    name_match = re.search(r'Name:\s*(.*?)(?:\n|$)', placeholder_content)
                     
-                    # Extract purpose, content, and value if available
-                    purpose_match = re.search(r'Purpose:\s*(.*?)(?:\n|$)', placeholder_content)
-                    content_match = re.search(r'Content:\s*(.*?)(?:\n|$)', placeholder_content)
-                    value_match = re.search(r'Value:\s*(.*?)(?:\n|$)', placeholder_content)
-                    
-                    # Combine the extracted information into a description
-                    description_parts = []
-                    if purpose_match:
-                        description_parts.append(purpose_match.group(1).strip())
-                    if content_match:
-                        description_parts.append(content_match.group(1).strip())
-                    if value_match:
-                        description_parts.append(value_match.group(1).strip())
-                    
-                    if description_parts:
-                        description = " - ".join(description_parts)
-                    
-                    # Generate a timestamp based on the index (5 seconds apart)
-                    timestamp = str((idx + 1) * 5)
-                    
-                    # Get timestamp from VideoInterpreter if available
-                    if self.video_interpreter:
-                        try:
-                            timestamp_hms = self._get_timestamp_from_interpreter(description)
-                            # Convert HH:MM:SS to seconds
-                            h, m, s = map(int, timestamp_hms.split(':'))
-                            timestamp = str(h * 3600 + m * 60 + s)
-                        except Exception as e:
-                            print(f"Error getting timestamp from interpreter: {str(e)}")
-                    
-                    # Check if screenshot already exists
-                    screenshot_path = self._get_screenshot_path()
-                    if not replace_existing and os.path.exists(screenshot_path):
-                        print(f"Skipping screenshot #{self.screenshot_counter} because it already exists: {screenshot_path}")
-                        self.screenshot_counter += 1
+                    if not name_match:
+                        print(f"Warning: Screenshot placeholder #{idx+1} does not have a Name attribute, skipping")
                         continue
                     
-                    if not os.path.exists(screenshot_path):
-                        # Extract timestamp from VideoInterpreter
-                        timestamp_seconds = int(timestamp)
+                    # Get the original name for display
+                    screenshot_name_original = name_match.group(1).strip()
+                    # Get the normalized name for cache lookup
+                    screenshot_name = self._normalize_name(screenshot_name_original)
+                    
+                    # Build a description for the image alt text
+                    # First check if there's any content other than the name
+                    has_additional_content = bool(re.search(r'(Purpose|Content|Value):\s*(.*?)(?:\n|$)', placeholder_content))
+                    
+                    if has_additional_content:
+                        # Extract purpose, content, and value if available
+                        purpose_match = re.search(r'Purpose:\s*(.*?)(?:\n|$)', placeholder_content)
+                        content_match = re.search(r'Content:\s*(.*?)(?:\n|$)', placeholder_content)
+                        value_match = re.search(r'Value:\s*(.*?)(?:\n|$)', placeholder_content)
                         
-                        # Take screenshot using our own method instead of VideoInterpreter
-                        screenshot_path = self.take_screenshot(timestamp_seconds)
+                        # Combine the extracted information into a description
+                        description_parts = []
+                        if purpose_match:
+                            description_parts.append(purpose_match.group(1).strip())
+                        if content_match:
+                            description_parts.append(content_match.group(1).strip())
+                        if value_match:
+                            description_parts.append(value_match.group(1).strip())
                         
-                        if not screenshot_path or not os.path.exists(screenshot_path):
-                            print(f"Warning: Failed to take screenshot at timestamp {timestamp_seconds}")
+                        description = " - ".join(description_parts) if description_parts else screenshot_name_original
+                    else:
+                        # If there's only a name, use it as the description
+                        description = screenshot_name_original
+                    
+                    # Check if we already have this screenshot in our cache
+                    screenshot_path = None
+                    if not replace_existing and screenshot_name in self.screenshot_cache:
+                        cached_path = self.screenshot_cache[screenshot_name]
+                        if os.path.exists(cached_path):
+                            screenshot_path = cached_path
+                            print(f"Using cached screenshot for '{screenshot_name_original}' (normalized: '{screenshot_name}'): {screenshot_path}")
+                    
+                    # If the screenshot doesn't exist in cache or we're replacing existing ones,
+                    # only generate a new one if there's additional content to use
+                    if screenshot_path is None:
+                        if has_additional_content:
+                            # Get timestamp from VideoInterpreter
+                            timestamp_hms = "00:00:05"  # Default
+                            if self.video_interpreter:
+                                try:
+                                    timestamp_hms = self._get_timestamp_from_interpreter(description)
+                                except Exception as e:
+                                    print(f"Error getting timestamp for '{screenshot_name_original}': {str(e)}")
+                            
+                            # Convert HH:MM:SS to seconds
+                            h, m, s = map(int, timestamp_hms.split(':'))
+                            timestamp_seconds = h * 3600 + m * 60 + s
+                            
+                            # Take screenshot
+                            screenshot_path = self.take_screenshot(timestamp_seconds, screenshot_name)
+                            
+                            if screenshot_path and os.path.exists(screenshot_path):
+                                # Add to cache
+                                self.screenshot_cache[screenshot_name] = screenshot_path
+                                self._save_screenshot_cache()
+                        else:
+                            print(f"Warning: Screenshot placeholder '{screenshot_name_original}' has no description content "
+                                  f"and does not exist in cache (normalized: '{screenshot_name}'), skipping")
                             continue
                     
-                    # Get relative path for markdown
-                    rel_path = os.path.relpath(screenshot_path, os.path.dirname(file_path))
-                    
-                    # Replace placeholder with actual image in markdown
-                    placeholder = f'[SCREENSHOT_PLACEHOLDER]{placeholder_content}[/SCREENSHOT_PLACEHOLDER]'
-                    replacement = f'![{description}]({rel_path})'
-                    content = content.replace(placeholder, replacement)
-                    
-                    print(f"Processed screenshot #{self.screenshot_counter}: {description} at timestamp {timestamp}")
-                    # Increment the counter for the next screenshot
-                    self.screenshot_counter += 1
+                    if screenshot_path and os.path.exists(screenshot_path):
+                        # Get relative path for markdown
+                        rel_path = os.path.relpath(screenshot_path, os.path.dirname(file_path))
+                        
+                        # Replace placeholder with actual image in markdown
+                        placeholder = f'[SCREENSHOT_PLACEHOLDER]{placeholder_content}[/SCREENSHOT_PLACEHOLDER]'
+                        replacement = f'![{description}]({rel_path})'
+                        content = content.replace(placeholder, replacement)
                 except Exception as e:
                     print(f"Error processing screenshot placeholder #{idx+1}: {str(e)}")
             
             # Ensure images are not inside code blocks by moving them outside
-            # Find all code blocks
             code_blocks = re.finditer(r'```.*?```', content, re.DOTALL)
             for block in code_blocks:
                 block_content = block.group(0)
@@ -242,15 +250,7 @@ class ScreenshotAgent:
             return file_path  # Return original file path if processing fails
     
     def _get_timestamp_from_interpreter(self, screenshot_description: str) -> str:
-        """
-        Get the timestamp for a screenshot from the VideoInterpreter.
-        
-        Args:
-            screenshot_description: Description of what should be in the screenshot.
-            
-        Returns:
-            Timestamp in HH:MM:SS format.
-        """
+        """Get the timestamp for a screenshot from the VideoInterpreter."""
         prompt = f"""
         I need to find a specific frame in the video that shows:
         
@@ -278,19 +278,10 @@ class ScreenshotAgent:
                 return f"{int(hours):02d}:{int(minutes):02d}:{int(seconds):02d}"
             
             # Default to beginning of video if no timestamp found
-            print(f"Warning: Could not extract timestamp from response: {response}")
             return "00:00:05"  # Default to 5 seconds into the video
     
-    def take_screenshot(self, timestamp_seconds: int) -> str:
-        """
-        Take a screenshot from the video at the specified timestamp and save it to disk.
-        
-        Args:
-            timestamp_seconds: Timestamp in seconds
-            
-        Returns:
-            Path to the saved screenshot
-        """
+    def take_screenshot(self, timestamp_seconds: int, screenshot_name: str) -> str:
+        """Take a screenshot from the video at the specified timestamp and save it to disk."""
         try:
             # Convert seconds to HH:MM:SS format
             hours = timestamp_seconds // 3600
@@ -298,11 +289,13 @@ class ScreenshotAgent:
             seconds = timestamp_seconds % 60
             timestamp_hms = f"{hours:02d}:{minutes:02d}:{seconds:02d}"
             
-            # Get the screenshot path
-            screenshot_path = self._get_screenshot_path()
+            # Create a unique filename using the name and timestamp
+            screenshot_filename = f"screenshot_{screenshot_name}_{int(time.time())}.png"
             
-            # Create the directory if it doesn't exist
-            os.makedirs(os.path.dirname(screenshot_path), exist_ok=True)
+            # Get the screenshot path
+            screenshots_dir = os.path.join(self.output_dir, "screenshots")
+            os.makedirs(screenshots_dir, exist_ok=True)
+            screenshot_path = os.path.join(screenshots_dir, screenshot_filename)
             
             # Extract the screenshot using VideoScreenshotTool
             screenshot = VideoScreenshotTool(self.video_path, timestamp_hms)
@@ -315,36 +308,6 @@ class ScreenshotAgent:
         except Exception as e:
             print(f"Error taking screenshot at {timestamp_seconds} seconds: {str(e)}")
             return None
-    
-    def _extract_screenshot(self, timestamp: str) -> Image.Image:
-        """
-        Extract a screenshot from the video at the specified timestamp.
-        
-        Args:
-            timestamp: Timestamp in HH:MM:SS format.
-            
-        Returns:
-            PIL Image object of the screenshot.
-        """
-        try:
-            screenshot = VideoScreenshotTool(self.video_path, timestamp)
-            return screenshot
-        except Exception as e:
-            raise Exception(f"Error extracting screenshot at {timestamp}: {str(e)}")
-    
-    def _get_screenshot_path(self) -> str:
-        """
-        Get the path for a screenshot based on the sequential counter.
-        
-        Returns:
-            Path to the screenshot file
-        """
-        # Create a directory for screenshots if it doesn't exist
-        screenshots_dir = os.path.join(self.output_dir, "screenshots")
-        os.makedirs(screenshots_dir, exist_ok=True)
-        
-        # Define the screenshot path using the counter for sequential numbering
-        return os.path.join(screenshots_dir, f"screenshot_{self.screenshot_counter}.png")
 
 
 # Example usage
@@ -359,6 +322,7 @@ if __name__ == "__main__":
     markdown_content = """# Radiographics Tutorial
     ## Step 1: Search for Articles
     [SCREENSHOT_PLACEHOLDER]
+    Name: Search Results
     Purpose: Shows a Google search result with "Radiographics Top 10 Articles" query
     Content: The search results page with the RG TEAM Top 10 Reading List appearing as the top result
     Value: Helps the user identify the correct search query and result to click
@@ -366,9 +330,28 @@ if __name__ == "__main__":
 
     ## Step 2: Access the Website
     [SCREENSHOT_PLACEHOLDER]
+    Name: Website Homepage
     Purpose: Shows the Radiographics website homepage
     Content: The main landing page with navigation menu and featured articles
     Value: Helps the user understand what the website looks like and how to navigate it
+    [/SCREENSHOT_PLACEHOLDER]
+    
+    ## Step 3: Reuse Previous Screenshot
+    [SCREENSHOT_PLACEHOLDER]
+    Name: Search Results
+    [/SCREENSHOT_PLACEHOLDER]
+    """
+    
+    # Create a second markdown file to demonstrate cross-file screenshot reuse
+    markdown_content2 = """# Radiographics Quick Guide
+    ## Finding Articles Quickly
+    [SCREENSHOT_PLACEHOLDER]
+    Name: Search Results
+    [/SCREENSHOT_PLACEHOLDER]
+
+    ## Exploring New Features
+    [SCREENSHOT_PLACEHOLDER]
+    Name: website homepage
     [/SCREENSHOT_PLACEHOLDER]
     """
     
@@ -376,7 +359,11 @@ if __name__ == "__main__":
     with open(temp_md_path, "w") as f:
         f.write(markdown_content)
     
-    print(f"Created temporary markdown file: {temp_md_path}")
+    temp_md_path2 = os.path.join(temp_dir, "quick_guide.md")
+    with open(temp_md_path2, "w") as f:
+        f.write(markdown_content2)
+    
+    print(f"Created temporary markdown files in: {temp_dir}")
     
     # Video Path - use a command line argument if provided, otherwise use default
     if len(sys.argv) > 1:
@@ -393,7 +380,6 @@ if __name__ == "__main__":
     video_interpreter.load_video(video_path)
     
     # Initialize the ScreenshotAgent
-    print("Initializing ScreenshotAgent...")
     output_dir = os.path.join(os.path.dirname(temp_md_path), "output")
     os.makedirs(output_dir, exist_ok=True)
     
@@ -403,18 +389,15 @@ if __name__ == "__main__":
         output_dir=output_dir
     )
 
-    # Process the Markdown file
-    print("Processing markdown file...")
+    # Process the first markdown file
+    print("\n*** Processing first markdown file ***")
     enhanced_markdown_path = screenshot_agent.process_markdown_file(temp_md_path)
-    print(f"Enhanced Markdown saved to: {enhanced_markdown_path}")
-    print(f"Screenshots saved in: {os.path.join(output_dir, os.path.basename(temp_md_path).split('.')[0] + '_screenshots')}")
     
-    # Run it again to demonstrate screenshot reuse
-    print("\nProcessing markdown file again to demonstrate screenshot reuse...")
-    enhanced_markdown_path = screenshot_agent.process_markdown_file(temp_md_path)
-    print(f"Enhanced Markdown saved to: {enhanced_markdown_path}")
-    print(f"Existing screenshots were reused instead of being regenerated.")
+    # Process the second markdown file to demonstrate cross-file screenshot reuse
+    print("\n*** Processing second markdown file (demonstrating cross-file screenshot reuse) ***")
+    enhanced_markdown_path2 = screenshot_agent.process_markdown_file(temp_md_path2)
     
-    print("\nTo run this example with a different video:")
-    print(f"python {__file__} /path/to/your/video.mp4")
-
+    print("\nScreenshot cache content:")
+    print(f"Cache saved to: {screenshot_agent.cache_file}")
+    for name, path in screenshot_agent.screenshot_cache.items():
+        print(f"  - '{name}': {path}")

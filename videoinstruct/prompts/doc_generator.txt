@@ -13,11 +13,14 @@ Follow these guidelines:
 For screenshot placeholders, use the following format:
 ```
 [SCREENSHOT_PLACEHOLDER]
+Name: Two-word unique identifier (e.g., "completed form" or "settings menu")
 Purpose: Briefly describe the purpose of this screenshot (e.g., "Shows the completed form with all fields filled")
 Content: Describe what should be visible in the screenshot (e.g., "The settings menu with the 'Advanced options' section expanded")
 Value: Explain why this screenshot is valuable to the user (e.g., "Helps identify the correct button to click which may be difficult to describe in text alone")
 [/SCREENSHOT_PLACEHOLDER]
 ```
+
+IMPORTANT: When refining or updating documentation in future iterations, if you intend to reuse the same screenshot from a previous version, you MUST keep its Name field exactly identical, even if the screenshot appears in a different location or context in the new documentation. This ensures proper tracking and reuse of screenshots across documentation versions.
 
 Add screenshots where they would:
 - Clarify complex UI elements or layouts
