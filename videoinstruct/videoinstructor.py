@@ -173,10 +173,10 @@ class VideoInstructor:
         # Create a filename based on version number
         version_suffix = "_final" if is_final else f"_v{self.doc_version}"
         filename = f"documentation{version_suffix}.md"
-        file_path = os.path.join(self.session_dir, filename)
+        raw_documentation_path = os.path.join(self.session_dir, filename)
         
         # Save the documentation to a file
-        with open(file_path, 'w') as f:
+        with open(raw_documentation_path, 'w') as f:
             f.write(documentation)
         
         # Process screenshots
@@ -185,18 +185,18 @@ class VideoInstructor:
         
         if screenshot_matches:
             print(f"\nProcessing {len(screenshot_matches)} screenshots...")
-            processed_path = self.screenshot_agent.process_markdown_file(file_path)
+            processed_documentation_path = self.screenshot_agent.process_markdown_file(raw_documentation_path)
             # Get list of unavailable screenshots
             unavailable_screenshots = self.screenshot_agent.get_unavailable_screenshots()
         else:
-            processed_path = file_path
+            processed_documentation_path = raw_documentation_path
             unavailable_screenshots = []
             
         # Generate PDF
         if self.config.generate_pdf_for_all_versions or is_final:
-            self._generate_pdf(processed_path)
+            self._generate_pdf(processed_documentation_path)
             
-        return processed_path, unavailable_screenshots
+        return processed_documentation_path, raw_documentation_path, unavailable_screenshots
     
     def _generate_pdf(self, markdown_path: str) -> str:
         """Generate a PDF from a Markdown file."""
@@ -218,7 +218,7 @@ class VideoInstructor:
         
         return pdf_path if os.path.exists(pdf_path) else None
     
-    def _evaluate_documentation(self, documentation_path: str) -> Tuple[bool, str]:
+    def _evaluate_documentation(self, documentation_path: str, unavailable_screenshots: list) -> Tuple[bool, str]:
         """Evaluate the documentation using the DocEvaluator."""
         print("\n" + "="*50)
         print("EVALUATING DOCUMENTATION...")
@@ -227,7 +227,7 @@ class VideoInstructor:
         with open(documentation_path, 'r', encoding='utf-8') as f:
             documentation = f.read()
         
-        is_approved, feedback = self.doc_evaluator.evaluate_documentation(documentation)
+        is_approved, feedback = self.doc_evaluator.evaluate_documentation(documentation, unavailable_screenshots)
         
         if is_approved:
             print("Documentation APPROVED by DocEvaluator")
@@ -240,17 +240,12 @@ class VideoInstructor:
         
         return is_approved, feedback
     
-    def _get_user_feedback(self, documentation_path: str) -> Tuple[str, bool]:
+    def _get_user_feedback(self) -> Tuple[str, bool]:
         """Get feedback from the user about the documentation."""
         # Show the most recent feedback if available
         most_recent_feedback = ""
         if self.doc_evaluator.feedback_history and len(self.doc_evaluator.feedback_history) > 0:
             most_recent_feedback = self.doc_evaluator.feedback_history[-1]
-        
-        # Inform user about PDF
-        pdf_path = f"{os.path.splitext(documentation_path)[0]}.pdf"
-        if os.path.exists(pdf_path):
-            print(f"\nA PDF version is available at: {pdf_path}")
         
         while True:
             user_input = input("\nAre you satisfied with this documentation? (yes/no): ").strip().lower()
@@ -390,25 +385,10 @@ class VideoInstructor:
                 print(current_documentation)
                 
                 # Save the current version of the documentation
-                current_documentation_path, current_unavailable_screenshots = self._save_documentation(current_documentation)
-                
-                # Add feedback about unavailable screenshots
-                if current_unavailable_screenshots:
-                    screenshot_feedback = f"""
-                    The following screenshots were not available in the video the way you described them:
-                    {", ".join(current_unavailable_screenshots)}. Please change or improve your description of the screenshots,     
-                    or if you cannot find any relevant frames to the description, please remove the screenshot placeholders.    
-                    Ensure not to remove any screenshots that are actually available in the video and you have not already been told to remove.
-                    """   
-                else:
-                    screenshot_feedback = ""
+                processed_documentation_path, raw_documentation_path, current_unavailable_screenshots = self._save_documentation(current_documentation)
 
                 # Let the DocEvaluator evaluate the documentation
-                is_approved, feedback = self._evaluate_documentation(current_documentation_path)
-                feedback += "\n\n" + screenshot_feedback
-
-                if screenshot_feedback != "":
-                    is_approved = False
+                is_approved, feedback = self._evaluate_documentation(raw_documentation_path, current_unavailable_screenshots)
                 
                 print(f"Evaluator's feedback: {feedback}")
 
@@ -417,7 +397,7 @@ class VideoInstructor:
                     print("\n" + "="*50)
                     print("ESCALATING TO USER: DocEvaluator has rejected the documentation multiple times.")
                     print("="*50)
-                    user_feedback, is_satisfied = self._get_user_feedback(current_documentation_path)
+                    user_feedback, is_satisfied = self._get_user_feedback()
                     
                     # Reset the rejection count after user intervention
                     self.doc_evaluator.reset_rejection_count()
@@ -433,7 +413,7 @@ class VideoInstructor:
                 # If DocEvaluator approved or we're continuing after rejection
                 elif is_approved:
                     # DocEvaluator approved, now get user feedback
-                    user_feedback, is_satisfied = self._get_user_feedback(current_documentation_path)
+                    user_feedback, is_satisfied = self._get_user_feedback()
                     
                     if not is_satisfied and user_feedback:
                         # Refine documentation based on user feedback
@@ -453,7 +433,7 @@ class VideoInstructor:
             print("\nReached maximum number of iterations without achieving satisfaction.")
         else:
             print("\nDocumentation generation completed successfully. The final documentation is saved at:")
-            print(os.path.splitext(current_documentation_path)[0] + ".pdf")
+            print(os.path.splitext(processed_documentation_path)[0] + ".pdf")
         
         # Return the final documentation path 
-        return current_documentation_path
+        return processed_documentation_path

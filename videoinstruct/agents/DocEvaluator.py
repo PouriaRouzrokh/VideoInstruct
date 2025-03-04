@@ -26,7 +26,7 @@ class DocEvaluator:
             if self.model_provider in providers:
                 os.environ[providers[self.model_provider]] = self.config.api_key
     
-    def evaluate_documentation(self, documentation: str) -> Tuple[bool, str]:
+    def evaluate_documentation(self, documentation: str, unavailable_screenshots: list) -> Tuple[bool, str]:
         """Evaluate the quality of the provided documentation."""
         if len(self.conversation_history) == 1:  # Only system message exists
             evaluation_prompt = f"""
@@ -37,6 +37,21 @@ class DocEvaluator:
             ```
             
             Provide your evaluation according to the criteria in your instructions.
+
+            Also, here is a list of screenshots that were not available in the video (the list might be empty):
+            [{", ".join(unavailable_screenshots)}]
+
+            Please evaluate the documentation considering these failed screenshots, if any. 
+            Note that when a screenshot is not available, it means that the screenshot is not present in the video or the screenshot description needs to be significantly changed.
+            So, provide detailed feedback on how to change the the screenshots in the next iteration or if you feel like that these screenshots are not necessary at all, recommend to remove them.
+            Note that if a screenshot cannot be generated for more than once, they definitely need to be removed as they do not exsit in the video, so try to make up for it by adding texts only.
+            Note that the screenshots should be writtin in the following format, so if you are recommending to change the screenshot, make sure to use this format:
+            [SCREENSHOT_PLACEHOLDER]
+            Name: Two-word unique identifier (e.g., "completed form" or "settings menu")
+            Purpose: Briefly describe the purpose of this screenshot (e.g., "Shows the completed form with all fields filled")
+            Content: Describe what should be visible in the screenshot (e.g., "The settings menu with the 'Advanced options' section expanded")
+            Value: Explain why this screenshot is valuable to the user (e.g., "Helps identify the correct button to click which may be difficult to describe in text alone")
+            [/SCREENSHOT_PLACEHOLDER]
             """
         else:
             evaluation_prompt = f"""
@@ -45,8 +60,22 @@ class DocEvaluator:
             ```markdown
             {documentation}
             ```
+            As this is not the first time you are evaluating this documentation, please say if it has improved? Are there still issues that need to be addressed?
+
+            Also, here is a list of screenshots that were not available in the video (the list might be empty):
+            [{", ".join(unavailable_screenshots)}]
             
-            Has it improved? Are there still issues that need to be addressed?
+            Please evaluate the documentation considering these failed screenshots, if any. 
+            Note that when a screenshot is not available, it means that the screenshot is not present in the video or the screenshot description needs to be significantly changed.
+            So, provide detailed feedback on how to change the the screenshots in the next iteration or if you feel like that these screenshots are not necessary at all, recommend to remove them.
+            Note that if a screenshot cannot be generated for more than once, they definitely need to be removed as they do not exsit in the video, so try to make up for it by adding texts only.
+            Note that the screenshots should be writtin in the following format, so if you are recommending to change the screenshot, make sure to use this format:
+            [SCREENSHOT_PLACEHOLDER]
+            Name: Two-word unique identifier (e.g., "completed form" or "settings menu")
+            Purpose: Briefly describe the purpose of this screenshot (e.g., "Shows the completed form with all fields filled")
+            Content: Describe what should be visible in the screenshot (e.g., "The settings menu with the 'Advanced options' section expanded")
+            Value: Explain why this screenshot is valuable to the user (e.g., "Helps identify the correct button to click which may be difficult to describe in text alone")
+            [/SCREENSHOT_PLACEHOLDER]
             """
         
         self.conversation_history.append({"role": "user", "content": evaluation_prompt})
