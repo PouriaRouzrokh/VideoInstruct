@@ -129,7 +129,7 @@ documentation_path = instructor.generate_documentation()
 
 When you run the documentation generation, you'll see informative output like this:
 
-````
+```
 ==================================================
 STARTING DOCUMENTATION GENERATION
 ==================================================
@@ -151,6 +151,7 @@ Workflow:
    - Will escalate to user after 3 rejections
 6. You'll be asked for feedback at certain intervals
 ----------------------------------------------------------------------------------------------------
+```
 
 ## Using as a Python Package
 
@@ -239,4 +240,7 @@ To contribute to VideoInstruct:
 ## License
 
 [MIT License](LICENSE)
-````
+
+```
+
+```
