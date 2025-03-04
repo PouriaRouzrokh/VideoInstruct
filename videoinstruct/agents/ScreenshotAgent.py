@@ -197,15 +197,16 @@ class ScreenshotAgent:
                             if self.video_interpreter:
                                 try:
                                     timestamp_hms = self._get_timestamp_from_interpreter(description)
-                                    print(f"Timestamp for '{screenshot_name_original}': {timestamp_hms}")
+                                    print(f"Extracted timestamp for new screenshot '{screenshot_name_original}': {timestamp_hms}")
                                 except Exception as e:
-                                    print(f"Error getting timestamp for '{screenshot_name_original}': {str(e)}")
+                                    print(f"Error getting timestamp for new screenshot '{screenshot_name_original}': {str(e)}")
                             
                             if timestamp_hms is None:
                                 # Screenshot is not available, add to list and remove placeholder
                                 self.unavailable_screenshots.append(screenshot_name_original)
                                 placeholder = f'[SCREENSHOT_PLACEHOLDER]{placeholder_content}[/SCREENSHOT_PLACEHOLDER]'
                                 content = content.replace(placeholder, '')
+                                print(f"Timestamp not available for screenshot: '{screenshot_name_original}', removing placeholder!")
                                 continue
                             
                             # Convert HH:MM:SS to seconds
@@ -224,6 +225,7 @@ class ScreenshotAgent:
                                 self.unavailable_screenshots.append(screenshot_name_original)
                                 placeholder = f'[SCREENSHOT_PLACEHOLDER]{placeholder_content}[/SCREENSHOT_PLACEHOLDER]'
                                 content = content.replace(placeholder, '')
+                                print(f"Screenshot failed to be taken for screenshot: '{screenshot_name_original}', removing placeholder!")
                                 continue
                     
                     if screenshot_path and os.path.exists(screenshot_path):
