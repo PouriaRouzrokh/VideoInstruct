@@ -39,6 +39,9 @@ class ScreenshotAgent:
         # Screenshots cache: {normalized_name: screenshot_path}
         self.screenshot_cache = self._load_screenshot_cache()
         
+        # List to track unavailable screenshots
+        self.unavailable_screenshots = []
+        
         # Get API key from config or environment variable
         self.api_key = self.config.api_key or os.getenv("GEMINI_API_KEY")
         if not self.api_key:
@@ -113,6 +116,9 @@ class ScreenshotAgent:
     def process_markdown_file(self, file_path: str, replace_existing: bool = False) -> str:
         """Process a markdown file, replacing screenshot placeholders with actual screenshots."""
         try:
+            # Clear the list of unavailable screenshots for this run
+            self.unavailable_screenshots = []
+            
             # Read the markdown file
             with open(file_path, 'r') as f:
                 content = f.read()
@@ -187,12 +193,19 @@ class ScreenshotAgent:
                     if screenshot_path is None:
                         if has_additional_content:
                             # Get timestamp from VideoInterpreter
-                            timestamp_hms = "00:00:05"  # Default
+                            timestamp_hms = None
                             if self.video_interpreter:
                                 try:
                                     timestamp_hms = self._get_timestamp_from_interpreter(description)
                                 except Exception as e:
                                     print(f"Error getting timestamp for '{screenshot_name_original}': {str(e)}")
+                            
+                            if timestamp_hms is None:
+                                # Screenshot is not available, add to list and remove placeholder
+                                self.unavailable_screenshots.append(screenshot_name_original)
+                                placeholder = f'[SCREENSHOT_PLACEHOLDER]{placeholder_content}[/SCREENSHOT_PLACEHOLDER]'
+                                content = content.replace(placeholder, '')
+                                continue
                             
                             # Convert HH:MM:SS to seconds
                             h, m, s = map(int, timestamp_hms.split(':'))
@@ -205,10 +218,12 @@ class ScreenshotAgent:
                                 # Add to cache
                                 self.screenshot_cache[screenshot_name] = screenshot_path
                                 self._save_screenshot_cache()
-                        else:
-                            print(f"Warning: Screenshot placeholder '{screenshot_name_original}' has no description content "
-                                  f"and does not exist in cache (normalized: '{screenshot_name}'), skipping")
-                            continue
+                            else:
+                                # Screenshot failed to be taken, add to unavailable list
+                                self.unavailable_screenshots.append(screenshot_name_original)
+                                placeholder = f'[SCREENSHOT_PLACEHOLDER]{placeholder_content}[/SCREENSHOT_PLACEHOLDER]'
+                                content = content.replace(placeholder, '')
+                                continue
                     
                     if screenshot_path and os.path.exists(screenshot_path):
                         # Get relative path for markdown
@@ -249,19 +264,32 @@ class ScreenshotAgent:
             print(f"Error in process_markdown_file: {str(e)}")
             return file_path  # Return original file path if processing fails
     
-    def _get_timestamp_from_interpreter(self, screenshot_description: str) -> str:
+    def _get_timestamp_from_interpreter(self, screenshot_description: str) -> Optional[str]:
         """Get the timestamp for a screenshot from the VideoInterpreter."""
         prompt = f"""
-        I need to find a specific frame in the video that shows:
+        I need to find a frame in the video that is relevant to the following description:
         
         {screenshot_description}
         
-        Please provide the exact timestamp (in HH:MM:SS format) where this appears in the video.
-        Only respond with the timestamp in HH:MM:SS format.
+        IMPORTANT RULES:
+        1. ONLY respond with either:
+           - A timestamp in HH:MM:SS format (e.g., "00:05:30") if you can find a relevant frame in the video
+           - The exact text "screenshot_not_available" if you cannot find any relevant frames to the description
+        2. DO NOT include any explanations or additional text
+        3. DO NOT use any other format for timestamps
+        4. DO NOT provide partial or uncertain responses
+        5. Return "screenshot_not_available" very sparingly and only for cases where you cannot find any relevant frames to the description.
         """
         
         # Get response from VideoInterpreter
         response = self.video_interpreter.respond(prompt)
+        
+        # Clean up any whitespace and get just the first line
+        response = response.strip().split('\n')[0].strip()
+        
+        # Check if screenshot is not available
+        if response.lower() == 'screenshot_not_available':
+            return None
         
         # Extract timestamp using regex (looking for HH:MM:SS format)
         timestamp_pattern = r'(\d{1,2}):(\d{2}):(\d{2})'
@@ -277,8 +305,8 @@ class ScreenshotAgent:
                 hours, minutes, seconds = parts
                 return f"{int(hours):02d}:{int(minutes):02d}:{int(seconds):02d}"
             
-            # Default to beginning of video if no timestamp found
-            return "00:00:05"  # Default to 5 seconds into the video
+            # No valid timestamp found
+            return None
     
     def take_screenshot(self, timestamp_seconds: int, screenshot_name: str) -> str:
         """Take a screenshot from the video at the specified timestamp and save it to disk."""
@@ -308,6 +336,10 @@ class ScreenshotAgent:
         except Exception as e:
             print(f"Error taking screenshot at {timestamp_seconds} seconds: {str(e)}")
             return None
+
+    def get_unavailable_screenshots(self) -> list:
+        """Get the list of screenshots that were not available in the last processed file."""
+        return self.unavailable_screenshots
 
 
 # Example usage

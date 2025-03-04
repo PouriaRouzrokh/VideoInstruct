@@ -164,7 +164,7 @@ class VideoInstructor:
         # Default to documentation
         return DocGeneratorResponse(type=ResponseType.DOCUMENTATION, content=response)
     
-    def _save_documentation(self, documentation: str, is_final: bool = False) -> str:
+    def _save_documentation(self, documentation: str, is_final: bool = False) -> Tuple[str, list]:
         """Save documentation to a file and process screenshots."""
         # Increment version number if not final
         if not is_final:
@@ -186,14 +186,17 @@ class VideoInstructor:
         if screenshot_matches:
             print(f"\nProcessing {len(screenshot_matches)} screenshots...")
             processed_path = self.screenshot_agent.process_markdown_file(file_path)
+            # Get list of unavailable screenshots
+            unavailable_screenshots = self.screenshot_agent.get_unavailable_screenshots()
         else:
             processed_path = file_path
+            unavailable_screenshots = []
             
         # Generate PDF
         if self.config.generate_pdf_for_all_versions or is_final:
             self._generate_pdf(processed_path)
             
-        return processed_path
+        return processed_path, unavailable_screenshots
     
     def _generate_pdf(self, markdown_path: str) -> str:
         """Generate a PDF from a Markdown file."""
@@ -309,7 +312,7 @@ class VideoInstructor:
         
         return initial_prompt
     
-    def generate_documentation(self) -> str:
+    def generate_documentation(self) -> Tuple[str, list]:
         """Generate step-by-step documentation from the loaded video."""
         if not self.transcription:
             raise ValueError("No transcription available. Please load a video or transcription first.")
@@ -366,10 +369,20 @@ class VideoInstructor:
                 print(current_documentation)
                 
                 # Save the current version of the documentation
-                current_documentation_path = self._save_documentation(current_documentation)
+                current_documentation_path, current_unavailable_screenshots = self._save_documentation(current_documentation)
                 
+                # Add feedback about unavailable screenshots
+                if current_unavailable_screenshots:
+                    screenshot_feedback = "The following screenshots were not available in the video the way you described them: " + ", ".join(current_unavailable_screenshots) + ". Please change or improve your description of the screenshots."
+                else:
+                    screenshot_feedback = ""
+
                 # Let the DocEvaluator evaluate the documentation
                 is_approved, feedback = self._evaluate_documentation(current_documentation_path)
+                feedback += "\n\n" + screenshot_feedback
+
+                if screenshot_feedback != "":
+                    is_approved = False
                 
                 print(f"Evaluator's feedback: {feedback}")
 
@@ -401,17 +414,20 @@ class VideoInstructor:
                         response = self.doc_generator.refine_documentation(user_feedback)
                         structured_response = self._get_structured_response(response)
                     elif is_satisfied:
-                        # User is satisfied, break the loop
                         break
                 else:
-                    # DocEvaluator rejected but not enough times to escalate to user
-                    # Refine documentation based on DocEvaluator feedback
-                    response = self.doc_generator.refine_documentation(f"FEEDBACK: {feedback}")
+                    # DocEvaluator rejected, refine based on feedback
+                    response = self.doc_generator.refine_documentation(feedback)
                     structured_response = self._get_structured_response(response)
+            
+            else:
+                raise ValueError(f"Unknown response type: {structured_response.type}")
         
-        # Return the final documentation
-        print("\n" + "="*50)
-        print("FINAL DOCUMENTATION GENERATED")
-        print("="*50)
-        print((f"Final documention available at: {current_documentation_path}"))
+        if iteration_count >= self.config.max_iterations:
+            print("\nReached maximum number of iterations without achieving satisfaction.")
+        else:
+            print("\nDocumentation generation completed successfully. The final documentation is saved at:")
+            print(os.path.splitext(current_documentation_path)[0] + ".pdf")
+        
+        # Return the final documentation path 
         return current_documentation_path

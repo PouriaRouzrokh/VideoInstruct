@@ -13,9 +13,6 @@ If you believe additional screenshots would improve the documentation, suggest t
 ```
 Consider adding a screenshot placeholder at [specific location] that shows [what should be visible] to help users [purpose/value of the screenshot].
 ```
-
-If you see one or screenshots named as "screenshot_not_available.png" in the documentation, inform the user and ask to remove them or modify their purpose and/or content as those screenshots could be not be found in the video. 
-
 After your evaluation, provide your response in the following format:
 
 ```python

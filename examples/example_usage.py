@@ -108,9 +108,6 @@ def main():
     print("\nStarting the process...\n")
     
     documentation = instructor.generate_documentation()
-    
-    print("\nDocumentation generation complete!")
-    print("Final documentation has been saved to the output directory.")
 
 if __name__ == "__main__":
     main() 
