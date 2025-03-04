@@ -9,13 +9,6 @@ load_dotenv()
 def extract_audio(video_path, output_path):
     """
     Extract audio from a video file and save it as an MP3.
-    
-    Args:
-    video_path (str): Path to the input video file
-    output_path (str): Path where the MP3 file will be saved
-    
-    Returns:
-    bool: True if successful, False otherwise
     """
     try:
         # Ensure output directory exists
@@ -46,12 +39,6 @@ def extract_audio(video_path, output_path):
 def format_time(time_str):
     """
     Convert time format from "00:00:00,000" to "0:00:00"
-    
-    Args:
-    time_str (str): Time string in format "00:00:00,000"
-    
-    Returns:
-    str: Formatted time string
     """
     # Split by comma and get the first part (hours:minutes:seconds)
     hours_mins_secs = time_str.split(',')[0]
@@ -68,12 +55,6 @@ def format_time(time_str):
 def process_transcription(transcription):
     """
     Process SRT format transcription into a simpler format
-    
-    Args:
-    transcription (str): Transcription in SRT format
-    
-    Returns:
-    str: Processed transcription
     """
     blocks = transcription.split('\n\n')
     processed_lines = []
@@ -95,12 +76,6 @@ def process_transcription(transcription):
 def transcribe_audio(file_path):
     """
     Transcribe audio file using OpenAI's API
-    
-    Args:
-    file_path (str): Path to the audio file
-    
-    Returns:
-    str: Processed transcription
     """
     # Get API key from environment variable
     api_key = os.getenv("OPENAI_API_KEY")
@@ -120,13 +95,6 @@ def transcribe_audio(file_path):
 def transcribe_video(video_path, output_path, temp_path="./temp"):
     """
     Extract transcription from a video file and save it as a text file.
-    
-    Args:
-    video_path (str): Path to the input video file
-    output_path (str): Path where the transcription text file will be saved
-    
-    Returns:
-    bool: True if successful, False otherwise
     """
     try:
         # Extract audio from the video

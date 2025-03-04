@@ -10,12 +10,6 @@ PROMPTS_DIR = CURRENT_DIR / "prompts"
 def load_prompt(filename):
     """
     Load a prompt from a text file in the prompts directory.
-    
-    Args:
-        filename (str): The name of the text file (without directory path)
-        
-    Returns:
-        str: The content of the prompt file
     """
     file_path = PROMPTS_DIR / filename
     
