@@ -373,7 +373,7 @@ class VideoInstructor:
                 
                 # Add feedback about unavailable screenshots
                 if current_unavailable_screenshots:
-                    screenshot_feedback = "The following screenshots were not available in the video the way you described them: " + ", ".join(current_unavailable_screenshots) + ". Please change or improve your description of the screenshots."
+                    screenshot_feedback = "The following screenshots were not available in the video the way you described them: " + ", ".join(current_unavailable_screenshots) + ". Please change or improve your description of the screenshots, or if you cannot find any relevant frames to the description, please remove the screenshot placeholders."
                 else:
                     screenshot_feedback = ""
 
