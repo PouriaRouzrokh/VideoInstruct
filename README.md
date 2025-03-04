@@ -240,7 +240,3 @@ To contribute to VideoInstruct:
 ## License
 
 [MIT License](LICENSE)
-
-```
-
-```
