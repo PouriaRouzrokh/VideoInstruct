@@ -197,6 +197,7 @@ class ScreenshotAgent:
                             if self.video_interpreter:
                                 try:
                                     timestamp_hms = self._get_timestamp_from_interpreter(description)
+                                    print(f"Timestamp for '{screenshot_name_original}': {timestamp_hms}")
                                 except Exception as e:
                                     print(f"Error getting timestamp for '{screenshot_name_original}': {str(e)}")
                             
