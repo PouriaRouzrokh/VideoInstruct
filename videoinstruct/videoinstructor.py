@@ -362,15 +362,11 @@ class VideoInstructor:
                 question_count += 1
                 question = structured_response.content
                 
-                # Check if we should ask the user instead of the VideoInterpreter
-                if question_count % self.config.user_feedback_interval == 0:
-                    answer = self._handle_user_question(question)
-                else:
-                    print(f"\nQuestion from DocGenerator ({question_count}):")
-                    print(question)
-                    answer = self.video_interpreter.respond(question)
-                    print(f"Answer from VideoInterpreter:")
-                    print(answer)
+                print(f"\nQuestion from DocGenerator ({question_count}):")
+                print(question)
+                answer = self.video_interpreter.respond(question)
+                print(f"Answer from VideoInterpreter:")
+                print(answer)
                 
                 # Send the answer back to DocGenerator
                 response = self.doc_generator.refine_documentation(f"ANSWER: {answer}")

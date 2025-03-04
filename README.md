@@ -192,7 +192,6 @@ config = VideoInstructorConfig(
    ),
 
    # VideoInstructor configuration
-   user_feedback_interval=3,  # Get user feedback every 3 iterations
    max_iterations=15,
    output_dir="output",
    temp_dir="temp"
@@ -240,3 +239,90 @@ To contribute to VideoInstruct:
 ## License
 
 [MIT License](LICENSE)
+
+## Configuration Options
+
+VideoInstruct offers extensive configuration options for each component through its configuration classes. Here's a detailed breakdown:
+
+### Main Configuration (VideoInstructorConfig)
+
+The main configuration class that orchestrates all components:
+
+```python
+config = VideoInstructorConfig(
+    max_iterations=10,          # Maximum refinement iterations
+    output_dir="output",        # Output directory for documentation
+    temp_dir="temp",           # Temporary file directory
+    generate_pdf_for_all_versions=True  # Generate PDFs for all versions
+)
+```
+
+### DocGenerator Configuration
+
+Controls how documentation is generated:
+
+```python
+doc_generator_config = DocGeneratorConfig(
+    model_provider="openai",    # AI provider (openai, anthropic, etc.)
+    model="o3-mini",           # Model to use
+    temperature=0.7,           # Creativity vs consistency (0-1)
+    max_output_tokens=4000,    # Max response length
+    stream=False,              # Stream responses
+    response_format={"type": "json_object"}  # Response format
+)
+```
+
+### VideoInterpreter Configuration
+
+Controls video analysis settings:
+
+```python
+video_interpreter_config = VideoInterpreterConfig(
+    model="gemini-2.0-flash",  # Gemini model for video analysis
+    temperature=0.7,           # Analysis randomness
+    max_output_tokens=None,    # Max response length
+    top_k=None,               # Top-k sampling
+    top_p=None                # Nucleus sampling
+)
+```
+
+### DocEvaluator Configuration
+
+Controls documentation quality assessment:
+
+```python
+doc_evaluator_config = DocEvaluatorConfig(
+    model_provider="deepseek",  # AI provider
+    model="deepseek-reasoner", # Model for evaluation
+    temperature=0.2,           # Low temp for consistent evaluation
+    max_rejection_count=3      # Max rejections before user escalation
+)
+```
+
+### Screenshot Agent Configuration
+
+Controls screenshot generation and analysis:
+
+```python
+screenshot_agent_config = ScreenshotAgentConfig(
+    model="gemini-2.0-flash",  # Model for image analysis
+    temperature=0.2,           # Low temp for consistent analysis
+    max_output_tokens=None     # Max response length
+)
+```
+
+### Environment Variables
+
+The following environment variables can be set in your `.env` file:
+
+```bash
+# Required API Keys
+OPENAI_API_KEY=your_openai_api_key
+GEMINI_API_KEY=your_gemini_api_key
+DEEPSEEK_API_KEY=your_deepseek_api_key
+
+# Optional Configuration
+VIDEOINSTRUCT_OUTPUT_DIR=custom_output_dir
+VIDEOINSTRUCT_TEMP_DIR=custom_temp_dir
+VIDEOINSTRUCT_MAX_ITERATIONS=15
+```

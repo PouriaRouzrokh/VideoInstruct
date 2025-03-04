@@ -66,7 +66,6 @@ def main():
         ),
         
         # VideoInstructor configuration
-        user_feedback_interval=3,  # Get user feedback every 3 iterations
         max_iterations=15,
         output_dir="output",
         temp_dir="temp"
