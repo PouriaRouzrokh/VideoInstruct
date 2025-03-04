@@ -6,11 +6,13 @@ import re
 def clean_markdown(markdown_text: str) -> str:
     """
     Clean Markdown text by:
-      - Ensuring headings have exactly one contiguous group of '#' characters followed by a single space.
-        Any extra '#' tokens accidentally placed before the actual heading text are removed.
-      - Removing extra leading whitespace from non-code block lines.
+      - Ensuring headings have proper '#' characters with correct spacing
+      - Removing extra spaces between '#' characters in headers
+      - Removing any hanging/unpaired ``` markers
+      - Removing extra leading whitespace from non-code block lines
+      - Preserving heading levels (##, ###, etc.)
       
-    Code blocks (delimited by ``` markers) are left unchanged.
+    Code blocks (properly delimited by ``` markers) are left unchanged.
     
     Args:
         markdown_text (str): The raw Markdown content.
@@ -21,30 +23,42 @@ def clean_markdown(markdown_text: str) -> str:
     lines = markdown_text.splitlines()
     cleaned_lines = []
     in_code_block = False
+    code_block_count = 0
 
     for line in lines:
-        # Check for code block delimiters and toggle code block state.
+        # Check for code block delimiters
         if line.strip().startswith("```"):
-            in_code_block = not in_code_block
-            cleaned_lines.append(line)
+            code_block_count += 1
+            in_code_block = code_block_count % 2 == 1  # Toggle state only for paired markers
+            if code_block_count % 2 == 1:  # Opening marker
+                cleaned_lines.append(line)
+            else:  # Closing marker
+                cleaned_lines.append(line)
             continue
 
         if not in_code_block:
-            # Remove any extra indentation.
+            # Remove any extra indentation
             line = line.lstrip()
 
-            # Process headings: if the line starts with '#' characters, clean up the heading markers.
+            # Process headings: if the line starts with '#' characters
             if re.match(r'^#+', line):
-                # Capture the initial '#' group and the rest of the text.
-                m = re.match(r'^(#+)\s*(.*)$', line)
+                # First, capture all consecutive '#' characters at the start
+                m = re.match(r'^(#+)\s*(.*?)(?:\s*#+\s*)?$', line)
                 if m:
-                    hashes = m.group(1)
-                    text = m.group(2)
-                    # Remove any accidental extra '#' characters from the beginning of the heading text.
+                    hashes = m.group(1)  # Preserve the original number of #s
+                    text = m.group(2).strip()
+                    # Remove any accidental extra '#' characters from the text
                     text = re.sub(r'^#+\s*', '', text)
-                    # Reconstruct the heading with a single space after the '#' markers.
+                    text = re.sub(r'\s*#+\s*$', '', text)
+                    # Reconstruct the heading with proper spacing
                     line = f"{hashes} {text}"
+
         cleaned_lines.append(line)
+    
+    # Remove any hanging code block markers if we ended in a code block
+    if in_code_block:
+        # Add a closing marker
+        cleaned_lines.append("```")
     
     return "\n".join(cleaned_lines)
 
