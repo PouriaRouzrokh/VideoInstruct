@@ -87,26 +87,7 @@ def main():
         config=config
     )
     
-    # Generate documentation
-    print(f"Generating documentation for video: {video_file}")
-    print("-"*100)
-    print("Here are the current models empowering the agents:")
-    print("DocGenerator: ", instructor.doc_generator.model_provider, instructor.doc_generator.config.model)
-    print("VideoInterpreter: ", "google", instructor.video_interpreter.config.model)
-    print("DocEvaluator: ", instructor.doc_evaluator.model_provider, instructor.doc_evaluator.config.model)
-    print("-"*100)
-    print("\nWorkflow:")
-    print("1. Video transcription will be extracted")
-    print("2. VideoInterpreter will provide a detailed description")
-    print("3. DocGenerator will create step-by-step documentation")
-    print("4. Generated documentation will be shown to you before evaluation")
-    print("5. DocEvaluator will assess documentation quality")
-    print("   - Will provide feedback on each evaluation round")
-    print("   - Will escalate to user after 3 rejections")
-    print("6. You'll be asked for feedback at certain intervals")
-    print("-"*100)
-    print("\nStarting the process...\n")
-    
+    # Generate documentation  
     documentation = instructor.generate_documentation()
 
 if __name__ == "__main__":

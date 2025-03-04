@@ -316,11 +316,32 @@ class VideoInstructor:
         """Generate step-by-step documentation from the loaded video."""
         if not self.transcription:
             raise ValueError("No transcription available. Please load a video or transcription first.")
-        
+
+        # Print workflow information
         print("\n" + "="*50)
         print("STARTING DOCUMENTATION GENERATION")
         print("="*50)
         
+        video_name = os.path.basename(self.video_path) if self.video_path else "Unknown video"
+        print(f"Generating documentation for video: {video_name}")
+        print("-"*100)
+        print("Here are the current models empowering the agents:")
+        print("DocGenerator: ", self.doc_generator.model_provider, self.doc_generator.config.model)
+        print("VideoInterpreter: ", "google", self.video_interpreter.config.model)
+        print("DocEvaluator: ", self.doc_evaluator.model_provider, self.doc_evaluator.config.model)
+        print("-"*100)
+        print("\nWorkflow:")
+        print("1. Video transcription will be extracted")
+        print("2. VideoInterpreter will provide a detailed description")
+        print("3. DocGenerator will create step-by-step documentation")
+        print("4. Generated documentation will be shown to you before evaluation")
+        print("5. DocEvaluator will assess documentation quality")
+        print("   - Will provide feedback on each evaluation round")
+        print("   - Will escalate to user after 3 rejections")
+        print("6. You'll be asked for feedback at certain intervals")
+        print("-"*100)
+        print("\nStarting the process...\n")
+
         # Reset DocEvaluator memory and document version counter
         self.doc_evaluator.reset_memory()
         self.doc_version = 0

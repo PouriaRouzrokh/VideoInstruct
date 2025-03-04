@@ -13,6 +13,33 @@ VideoInstruct is a tool that automatically generates step-by-step documentation 
 - Configurable escalation to human users
 - Screenshot generation and annotation
 - PDF export capabilities
+- Enhanced workflow visibility with real-time status updates
+- Transparent model information display for each agent
+
+## Workflow Information
+
+When running VideoInstruct, you'll see detailed information about:
+
+1. Current AI models powering each agent:
+
+   - DocGenerator model and provider
+   - VideoInterpreter model (Google Gemini)
+   - DocEvaluator model and provider
+
+2. Step-by-step workflow breakdown:
+
+   - Video transcription extraction
+   - Detailed video interpretation
+   - Documentation generation
+   - Documentation review and evaluation
+   - Quality assessment with feedback
+   - User interaction points
+
+3. Progress tracking:
+   - Documentation versions
+   - Evaluation results
+   - Screenshot processing status
+   - PDF generation status
 
 ## Project Structure
 
@@ -68,42 +95,62 @@ pip install videoinstruct
 1. Clone the repository:
 
    ```bash
-   git clone https://github.com/PouriaRouzrokh/VideoInstruct.git
+   git clone https://github.com/yourusername/VideoInstruct.git
    cd VideoInstruct
    ```
 
-2. Install the package in development mode:
+2. Install dependencies:
 
    ```bash
-   pip install -e .
+   pip install -r requirements.txt
    ```
 
-3. Create a `.env` file in the root directory with your API keys:
-   ```
+3. Set up your environment variables in `.env`:
+
+   ```bash
    OPENAI_API_KEY=your_openai_api_key
    GEMINI_API_KEY=your_gemini_api_key
    DEEPSEEK_API_KEY=your_deepseek_api_key
    ```
 
-## Examples
+## Usage
 
-The repository includes two example scripts to help you get started:
+### Basic Usage
 
-1. **example_usage.py**: Demonstrates direct usage with the repository structure and hardcoded paths. This is useful if you're working directly with the repository without installing it as a package.
+```python
+from videoinstruct import VideoInstructor, VideoInstructorConfig
 
-2. **package_usage.py**: Shows how to use VideoInstruct after it's been installed as a package. This example demonstrates:
-   - Using VideoInstruct as an imported Python package in your code
-   - Using VideoInstruct from the command line
+# Initialize VideoInstructor with your video
+instructor = VideoInstructor(video_path="path/to/your/video.mp4")
 
-To run the examples:
-
-```bash
-# Run the basic example
-python examples/example_usage.py
-
-# Run the package usage example
-python examples/package_usage.py
+# Generate documentation
+documentation_path = instructor.generate_documentation()
 ```
+
+When you run the documentation generation, you'll see informative output like this:
+
+````
+==================================================
+STARTING DOCUMENTATION GENERATION
+==================================================
+Generating documentation for video: your_video.mp4
+----------------------------------------------------------------------------------------------------
+Here are the current models empowering the agents:
+DocGenerator:  openai gpt-4
+VideoInterpreter:  google gemini-2.0-flash
+DocEvaluator:  deepseek deepseek-reasoner
+----------------------------------------------------------------------------------------------------
+
+Workflow:
+1. Video transcription will be extracted
+2. VideoInterpreter will provide a detailed description
+3. DocGenerator will create step-by-step documentation
+4. Generated documentation will be shown to you before evaluation
+5. DocEvaluator will assess documentation quality
+   - Will provide feedback on each evaluation round
+   - Will escalate to user after 3 rejections
+6. You'll be asked for feedback at certain intervals
+----------------------------------------------------------------------------------------------------
 
 ## Using as a Python Package
 
@@ -116,47 +163,50 @@ from videoinstruct.agents.VideoInterpreter import VideoInterpreterConfig
 from videoinstruct.agents.DocEvaluator import DocEvaluatorConfig
 from pathlib import Path
 
-# Create configuration
+# Configure the VideoInstructor
 config = VideoInstructorConfig(
-        # DocGenerator configuration
-        doc_generator_config=DocGeneratorConfig(
-            api_key=openai_api_key,
-            model_provider="openai",
-            model="o3-mini",
-            temperature=0.7,
-            max_output_tokens=4000
-        ),
+   # DocGenerator configuration
+   doc_generator_config=DocGeneratorConfig(
+      api_key=openai_api_key,
+      model_provider="openai",
+      model="o3-mini",
+      temperature=0.7,
+      max_output_tokens=4000
+   ),
 
-        # VideoInterpreter configuration
-        video_interpreter_config=VideoInterpreterConfig(
-            api_key=gemini_api_key,
-            model="gemini-2.0-flash",  # You can change this to any supported Gemini model
-            temperature=0.7
-        ),
+   # VideoInterpreter configuration
+   video_interpreter_config=VideoInterpreterConfig(
+      api_key=gemini_api_key,
+      model="gemini-2.0-flash",  # You can change this to any supported Gemini model
+      temperature=0.7
+   ),
 
-        # DocEvaluator configuration
-        doc_evaluator_config=DocEvaluatorConfig(
-            api_key=deepseek_api_key,
-            model_provider="deepseek",
-            model="deepseek-reasoner",
-            temperature=0.2,
-            max_rejection_count=3  # Number of rejections before escalating to user
-        ),
+   # DocEvaluator configuration
+   doc_evaluator_config=DocEvaluatorConfig(
+      api_key=deepseek_api_key,
+      model_provider="deepseek",
+      model="deepseek-reasoner",
+      temperature=0.2,
+      max_rejection_count=3  # Number of rejections before escalating to user
+   ),
 
-        # VideoInstructor configuration
-        user_feedback_interval=3,  # Get user feedback every 3 iterations
-        max_iterations=15,
-        output_dir="output",
-        temp_dir="temp"
-    )
+   # VideoInstructor configuration
+   user_feedback_interval=3,  # Get user feedback every 3 iterations
+   max_iterations=15,
+   output_dir="output",
+   temp_dir="temp"
+)
 
-# Process a video
-video_path = Path("RG_Drive_Demonsration.mp4")
+# Path to the video file - replace with your video file name
+video_path = "test.mp4"  # Updated to match the actual file name
 
 # Initialize VideoInstructor
-instructor = VideoInstructor(video_path = video_path, config=config)
+instructor = VideoInstructor(
+   video_path=video_path,
+   config=config
+)
 
-# Generate the documentation
+# Generate documentation
 documentation = instructor.generate_documentation()
 ```
 
@@ -189,3 +239,4 @@ To contribute to VideoInstruct:
 ## License
 
 [MIT License](LICENSE)
+````
