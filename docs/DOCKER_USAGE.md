@@ -69,15 +69,6 @@ This guide covers everything you need to know about using VideoInstruct with Doc
      --env-file .env \
      videoinstruct/videoinstruct:latest \
      --video /app/data/your_video.mp4
-
-   # With a YouTube URL
-   docker run --rm \
-     -v "$(pwd)/data:/app/data" \
-     -v "$(pwd)/output:/app/output" \
-     -v "$(pwd)/temp:/app/temp" \
-     --env-file .env \
-     videoinstruct/videoinstruct:latest \
-     --video https://www.youtube.com/watch?v=your_video_id
    ```
 
 The container will:
@@ -244,7 +235,6 @@ python scripts/publish_docker.py --no-push
 
    - Check if the URL is accessible
    - Try downloading the video manually to the data directory
-   - For YouTube videos, make sure the video is public or unlisted
 
 5. Container Start Failures
 

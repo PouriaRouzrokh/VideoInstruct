@@ -2,6 +2,12 @@
 
 VideoInstruct is a tool that automatically generates step-by-step documentation from instructional videos. It uses AI to extract transcriptions, interpret video content, and create comprehensive markdown guides.
 
+## Pipeline:
+
+<img src="Figure.png" width="900" alt="VideoInstruct Pipeline">
+
+VideoInstruct employs a sophisticated pipeline that transforms instructional videos into comprehensive documentation through multiple AI-powered stages. The process begins with the Video Interpreter, which simultaneously handles video transcription extraction and visual content analysis. This dual-stream approach ensures both spoken instructions and visual demonstrations are captured. The extracted information is then fed into the Documentation Generator, which creates structured, step-by-step documentation. Before finalization, the Documentation Evaluator assesses the quality and completeness of the generated content using conversation memory and interactive Q&A between AI agents. If the documentation doesn't meet the defined standards, it's sent back for refinement, ensuring high-quality output that accurately represents the video's instructional content.
+
 ## Quick Start
 
 ### Using Docker (Recommended)
@@ -10,7 +16,6 @@ The fastest and simplest way to use VideoInstruct is through our Docker image. S
 
 - Installation and prerequisites
 - Downloading the Docker file from Docker Hub.
-- Running with local videos or YouTube URLs
 - Configuration options
 - Troubleshooting common issues
 
@@ -61,21 +66,30 @@ documentation = instructor.generate_documentation()
 ```
 VideoInstruct/
 ├── data/                  # Place your video files here
+├── docs/                  # Documentation files
+│   ├── README.md         # Main documentation
+│   ├── DOCKER_USAGE.md   # Docker setup guide
+│   └── Figure.png        # Pipeline diagram
 ├── examples/              # Example usage scripts
-│   ├── example_usage.py   # Basic Python example
-│   └── docker_example.py  # Docker-based example
-├── output/                # Generated documentation output
-├── scripts/               # Utility scripts
-├── videoinstruct/         # Main package
-│   ├── agents/           # AI agent modules
-│   ├── prompts/          # System prompts for agents
-│   ├── tools/            # Utility tools
-│   ├── utils/            # Utility functions
-│   ├── cli.py            # Command-line interface
-│   ├── configs.py        # Configuration classes
+│   └── example_usage.py  # Basic usage example
+├── output/               # Generated documentation output
+├── scripts/              # Utility scripts
+├── temp/                 # Temporary files directory
+├── videoinstruct/        # Main package
+│   ├── agents/          # AI agent modules
+│   ├── prompts/         # System prompts for agents
+│   ├── tools/           # Utility tools
+│   ├── utils/           # Utility functions
+│   ├── __init__.py      # Package initialization
+│   ├── configs.py       # Configuration classes
+│   ├── prompt_loader.py # Prompt loading utilities
 │   └── videoinstructor.py # Main orchestration class
-├── DOCKER_USAGE.md       # Docker setup and usage guide
-└── README.md             # This file
+├── Dockerfile           # Docker configuration
+├── LICENSE              # MIT License
+├── MANIFEST.in         # Package manifest
+├── pyproject.toml      # Project metadata
+├── requirements.txt    # Python dependencies
+└── setup.py           # Package setup script
 ```
 
 ## Using as a Python Package

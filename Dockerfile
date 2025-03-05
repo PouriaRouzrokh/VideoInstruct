@@ -66,22 +66,7 @@ def get_env_int(key, default):
         return int(value)
     except ValueError:
         print(f"Warning: Invalid value for {key}, using default: {default}")
-        return default
-
-def download_video(url, target_dir="/app/data"):
-    """Download video from URL using various supported methods"""
-    try:
-        import yt_dlp
-        ydl_opts = {
-            'format': 'best',
-            'outtmpl': os.path.join(target_dir, '%(title)s.%(ext)s')
-        }
-        with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-            info = ydl.extract_info(url, download=True)
-            return os.path.join(target_dir, ydl.prepare_filename(info))
-    except Exception as e:
-        print(f"Error downloading video: {e}")
-        return None
+        return default  
 
 def main():
     parser = argparse.ArgumentParser(description='VideoInstruct Docker Entrypoint')
