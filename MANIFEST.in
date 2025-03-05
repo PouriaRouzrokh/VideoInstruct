@@ -1,5 +1,7 @@
 include LICENSE
-include README.md
+include docs/README.md
+include docs/DOCKER_USAGE.md
+include docs/Figure.png
 include requirements.txt
 recursive-include videoinstruct/prompts *.md
 recursive-include videoinstruct/prompts *.txt
